@@ -1,0 +1,35 @@
+# Path to OpenBLAS, ARPACK
+
+OPENBLAS_DIR    =  /usr/local/openblas
+ARPACK_DIR      =  /usr/local/arpack
+BOOST_DIR     =  /usr/local/boost
+
+LIB_INC         = -I$(OPENBLAS_DIR)/include \
+                  -I$(BOOST_DIR)/include
+
+LIB_LD          = -L$(OPENBLAS_DIR)/lib \
+                  -L$(ARPACK_DIR)/lib \
+                  -L$(BOOST_DIR)/lib
+
+# set DISABLE_MPI = 0 to enable MPI
+# set DISABLE_MPI = 1 to disable MPI
+DISABLE_MPI     =  0
+
+# set DEBUG_LEVEL = 0 for full optimization (-O3) and disable all debug functionality
+# set DEBUG_LEVEL = 1 for full optimization (-O3) and enable all debug macroses (range checks etc.)
+# set DEBUG_LEVEL = 2 to compile in debug mode (-O0 -g) and enable all debug macroses (range checks etc.)
+DEBUG_LEVEL     =       0
+
+# provide specific options for compilers
+CPPFLAGS	=	-Wall -fopenmp
+CCFLAGS		=	-std=c99 -Wall -fopenmp
+
+# Compilers
+NOMPI_CC          =  gcc
+NOMPI_CPP         =  g++
+NOMPI_LD          =  g++
+
+# MPI compilers
+MPI_CC          =  mpicc
+MPI_CPP         =  mpicxx
+MPI_LD          =  mpicxx
