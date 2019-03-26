@@ -2,14 +2,11 @@
 
 OPENBLAS_DIR    =  /usr/local/openblas
 ARPACK_DIR      =  /usr/local/arpack
-BOOST_DIR     =  /usr/local/boost
 
-LIB_INC         = -I$(OPENBLAS_DIR)/include \
-                  -I$(BOOST_DIR)/include
+LIB_INC         = -I$(OPENBLAS_DIR)/include
 
 LIB_LD          = -L$(OPENBLAS_DIR)/lib \
-                  -L$(ARPACK_DIR)/lib \
-                  -L$(BOOST_DIR)/lib
+                  -L$(ARPACK_DIR)/lib
 
 # set DISABLE_MPI = 0 to enable MPI
 # set DISABLE_MPI = 1 to disable MPI

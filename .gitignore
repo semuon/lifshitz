@@ -26,3 +26,5 @@ tests/runners/*.cpp
 *.pyc
 # IDE files
 .vscode/
+# Apple files
+.DS_store
