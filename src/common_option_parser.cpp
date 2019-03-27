@@ -20,7 +20,13 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::SwitchArg switchOverwriteLogs("", "append-logs", "Append log files if they exist", cmd, true);
     TCLAP::ValueArg<std::string> argLogsDir("", "logs-dir", "Directory for log files. By default stdout and stderr are used.", false, "", "path", cmd);
     TCLAP::ValueArg<std::string> argDataDir("", "data-dir", "Directory for data files. By default current directory is used.", false, ".", "path", cmd);
+    TCLAP::ValueArg<uint> argDim("", "dim", "Number of spatial dimensions. By default is 3.", false, 3, "dimension", cmd);
     TCLAP::ValueArg<std::string> argL("", "L", "Lattice size", true, "5,5,5", "Lx,Ly,Lz", cmd);
+
+    TCLAP::ValueArg<double> argM2("", "M2", "Heavy mass scale (squared)", false, 0, "real number", cmd);
+    TCLAP::ValueArg<double> argm2("", "m2", "Mass (squared)", false, 1.0, "real number", cmd);
+    TCLAP::ValueArg<double> argZ("", "Z", "Spatial derivative factor", false, 1.0, "real number", cmd);
+    TCLAP::ValueArg<double> argLambda("", "lambda", "Actually, it is t'Hooft coupling lambda * N", false, 1.0, "real number", cmd);
 
     try
     {
@@ -32,14 +38,19 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
       std::exit(-1);
     }
 
+    pM2 = argM2.getValue();
+    pm2 = argm2.getValue();
+    pZ = argZ.getValue();
+    pLambda = argLambda.getValue();
+
     pLogsDirPath = argLogsDir.getValue();
     pDataDirPath = argDataDir.getValue();
     pOverwriteLogs = switchOverwriteLogs.getValue();
     std::string strL = argL.getValue();
+    pDim = argDim.getValue();
+    pL.resize(pDim);
     common_option_parser_ParseLatticeSizes(strL);
     
-    //pT = argT.getValue();
-    //if (fabs(pT) < __FLT_EPSILON__) pT = 0;
     pNthreads = argNthreads.getValue();
     pPrefix = argPrefix.getValue();
     
@@ -131,9 +142,12 @@ common_option_parser_PrintParameters(int argc, char **argv)
     pStdLogs.Write("%-3d x   ", pL[dir]);
   pStdLogs.Write("%-3d\n", pL[pDim - 1]);
 
-  pStdLogs.Write("\n");
+  pStdLogs.Write("  Dim:                                         %d\n", pDim);
 
-  //pStdLogs.Write("  m:                                           %2.4le\n", pM);
+  pStdLogs.Write("  lambda:                                      %2.4le\n", pLambda);
+  pStdLogs.Write("  m^2:                                         %2.4le\n", pm2);
+  pStdLogs.Write("  M^2:                                         %2.4le\n", pM2);
+  pStdLogs.Write("  Z:                                           %2.4le\n", pZ);
   
   option_parser_PrintParameters();
 }

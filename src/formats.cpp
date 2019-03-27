@@ -99,40 +99,6 @@ void Formats::PrintScalarField(FILE *f, const double t, const ScalarField  &val,
   fflush(f);
 }
 
-
-
-void Formats::PrintOccupationNumber(FILE *f, const double t, const VECTOR< VECTOR< double > > &occ_num, const Lattice &lat, const Lattice &klat)
-{
-  uint volume= lat.Volume();
-  uint kvolume= klat.Volume(); 
-
-
-  for(uint k = 0; k < kvolume; k++)
-  {
-    for (uint j=0; j < 4*volume; j++)
-    {
-      
-      float occ=  (float) occ_num[k][j]; 
-      SAFE_FWRITE(&occ, sizeof(float), 1, f);
-    }
-  }
-  
-  fflush(f);
-}
-
-
-void Formats::PrintTotOccupationNumber(FILE *f, const double t, const  VECTOR< double >  &tot_occ_num,  const Lattice &klat)
-{
-  uint kvolume= klat.Volume(); 
-
-  for(uint k = 0; k < kvolume; k++)
-  {
-      SAFE_FPRINTF(f, "%2.4lf\t%d\t%2.15le\n", t, k,tot_occ_num[k]);
-  }
-  
-  fflush(f);
-}
-
 void Formats::PrintScalar(FILE *f, const double t, const double val)
 {
   SAFE_FPRINTF(f, "%2.4lf\t%2.15le\n", t, val);
@@ -210,3 +176,21 @@ void Formats::ReadVectorField( const std::string name, const double t, VectorFie
  fclose(f); 
     
 }
+
+void Formats::PrintMatrix(FILE *f, const Matrix &m)
+{
+  const uint ncols = m.Ncols();
+  const uint nrows = m.Nrows();
+
+  for(uint i = 0; i < nrows; i++)
+  {
+    for(uint j = 0; j < ncols - 1; j++)
+    {
+      SAFE_FPRINTF(f, "%2.15le\t%2.15le\t", real(m(i, j)), imag(m(i, j)));
+    }
+    SAFE_FPRINTF(f, "%2.15le\t%2.15le\n", real(m(i, ncols - 1)), imag(m(i, ncols - 1)));
+  }
+
+  fflush(f);
+}
+
