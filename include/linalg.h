@@ -45,6 +45,7 @@ private:
 public:
   // Callback function for matrix by vector operations
   typedef void (*MatrixByVectorFunc)(SpinorField &out, const SpinorField &in, void *args);
+  typedef void (*MatrixByVector)(LinearVector &out, const LinearVector &in, void *args);
 
   // Interface to LAPACK functions
   static void LapackInvert(t_complex *A, int n);
@@ -59,6 +60,10 @@ public:
   static void LapackCholeskyDecomposition(t_complex *A, int n);
 
   // Iterative algorithms
+
+  void CRM(Linalg::MatrixByVector F, void *args,
+           const LinearVector &source, LinearVector &solution,
+           double tol, int imax, double &max_err, int &num_iter);
 
   // This is algorithm from Jegerlehner, B. , http://arxiv.org/abs/hep-lat/9612014
   // F|solution > = |source >, |solution > = F^-1 |source>
