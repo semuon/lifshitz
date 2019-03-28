@@ -23,6 +23,7 @@ typedef struct PhysicalParams_struct
   double invM2;
   double Z;
   double lambda;
+  ScalarField *epsilon;
 } tPhysicalParams;
 
 void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon, const tPhysicalParams &params)
@@ -69,6 +70,53 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
   }
 }
 
+void main_LoperatorTimesVec(LinearVector &out, const LinearVector &in, void *args)
+{
+  ASSERT(args != NULL);
+
+  tPhysicalParams &params = *((tPhysicalParams *)args);
+
+  double m2 = params.m2;
+  double invM2 = params.invM2;
+  double Z = params.Z;
+  ScalarField &epsilon = *params.epsilon;
+
+  const Lattice &lat = epsilon.GetLattice();
+
+  int ndim = lat.Dim();
+  uint vol = lat.Volume();
+
+  ASSERT(out.Count() == in.Count());
+  ASSERT(epsilon.Count() == in.Count());
+  ASSERT(in.Count() == vol);
+
+  out.Clear();
+
+  for(uint x = 0; x < vol; x++)
+  {
+    out[x] += (m2 + 2.0 * epsilon(x) - 2.0 * ndim * Z + 4.0 * ndim * ndim * invM2) * in[x];
+
+    for(int mu = 0; mu < ndim; mu++)
+    {
+      uint xmu_fwd = lat.SiteIndexForward(x, mu);
+      uint xmu_bwd = lat.SiteIndexBackward(x, mu);
+
+      double val = Z - 4.0 * ndim * invM2;
+      out[x] += val * (in[xmu_fwd] + in[xmu_bwd]);
+
+      for(int nu = 0; nu < ndim; nu++)
+      {
+        uint xmu_fwd_nu_fwd = lat.SiteIndexForward(xmu_fwd, nu);
+        uint xmu_fwd_nu_bwd = lat.SiteIndexBackward(xmu_fwd, nu);
+        uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
+        uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
+
+        out[x] += invM2 * (in[xmu_fwd_nu_fwd] + in[xmu_fwd_nu_bwd] + in[xmu_bwd_nu_fwd] + in[xmu_bwd_nu_bwd]);
+      }
+    }
+  }
+}
+
 int main(int argc, char **argv)
 {
   common_AppInit(argc, argv, "Lifshitz regime");
@@ -91,16 +139,17 @@ int main(int argc, char **argv)
   double Z = pZ;
   double lambda = pLambda;
 
+  ScalarField epsilon0(lat);
+  ScalarField epsilon1(lat);
+  ScalarField solution(lat);
+  ScalarField depsilon(lat);
+
   tPhysicalParams params;
   params.lambda = lambda;
   params.invM2 = invM2;
   params.m2 = m2;
   params.Z = Z;
-
-  ScalarField epsilon0(lat);
-  ScalarField epsilon1(lat);
-  ScalarField solution(lat);
-  ScalarField depsilon(lat);
+  params.epsilon = &epsilon0;
 
   VECTOR<double> evals(vol);
   VECTOR<double> solution_evals(vol);
@@ -121,6 +170,29 @@ int main(int argc, char **argv)
   t_complex solution_action = 0;
   t_complex solution_action0 = 0;
   t_complex solution_action1 = 0;
+
+  ScalarField nonsense(lat);
+  ScalarField nonsense2(lat);
+  ScalarField nonsense3(lat);
+  ScalarField nonsense4(lat);
+  ScalarField nonsense5(lat);
+  nonsense3.Clear();
+  nonsense4.Clear();
+  nonsense5.Clear();
+  for(uint x = 0; x < vol; x++)
+  {
+    nonsense(x) = rand_double(-10,10);
+    nonsense2(x) = rand_double(-10,10);
+  }
+
+  params.epsilon = &nonsense;
+  main_Loperator(Lop, lat, nonsense, params);
+  nonsense3 = Lop * nonsense2;
+  main_LoperatorTimesVec(nonsense4, nonsense2, (void*)&params);
+  nonsense5 = nonsense4 - nonsense3;
+  cout << endl;
+  cout << "DISCREPANCY = " << nonsense5.Norm() << endl;
+  cout << endl;
 
   bool is_solution_found = false;
 
