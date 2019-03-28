@@ -3,7 +3,6 @@
 
 #include <common.h>
 #include <linear_vector.h>
-#include <spinor_field.h>
 
 // Exception of Lapack routines
 class LapackFailure : public std::runtime_error
@@ -44,7 +43,6 @@ private:
 
 public:
   // Callback function for matrix by vector operations
-  typedef void (*MatrixByVectorFunc)(SpinorField &out, const SpinorField &in, void *args);
   typedef void (*MatrixByVector)(BaseLinearVector &out, const BaseLinearVector &in, void *args);
 
   // Interface to LAPACK functions
@@ -67,8 +65,8 @@ public:
 
   // This is algorithm from Jegerlehner, B. , http://arxiv.org/abs/hep-lat/9612014
   // F|solution > = |source >, |solution > = F^-1 |source>
-  static void MultishiftCG(MatrixByVectorFunc F, void *args, const Lattice &lat, const SpinorField &source,
-                           int nsys, VECTOR<SpinorField> &solution, VECTOR<double> sigma,
+  static void MultishiftCG(MatrixByVector F, void *args, int n, const BaseLinearVector &source,
+                           int nsys, VECTOR<BaseLinearVector> &solution, VECTOR<double> sigma,
                            double tol, int imax, double &max_err, int &num_iter);
 
 /**************************************************************************************/
@@ -123,13 +121,13 @@ public:
 
   static void SortEigensystem(VECTOR<int> &sorted_idx, const VECTOR<t_complex> &evals, const SortingMode mode);
   
-  static void TestOrthogonality(VECTOR<SpinorField> &evecs, const VECTOR<int> idx_to_test, const double tol);
+  static void TestOrthogonality(VECTOR<BaseLinearVector> &evecs, const VECTOR<int> idx_to_test, const double tol);
 
-  static void TestEigensystem(MatrixByVectorFunc F, void *args,
-                              const VECTOR<t_complex> &evals, VECTOR<SpinorField> &evecs,
+  static void TestEigensystem(MatrixByVector F, void *args,
+                              const VECTOR<t_complex> &evals, VECTOR<BaseLinearVector> &evecs,
                               const VECTOR<int> idx_to_test, const double tol);
 
-  static void GrammSchmidt(const VECTOR<int> &vec_idx, VECTOR<SpinorField> &vecs);
+  static void GrammSchmidt(const VECTOR<int> &vec_idx, VECTOR<BaseLinearVector> &vecs);
 };
 
 #endif

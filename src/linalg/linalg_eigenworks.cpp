@@ -49,7 +49,7 @@ void Linalg::SortEigensystem(VECTOR<int> &sorted_idx, const VECTOR<t_complex> &e
     sorted_idx[i] = pairs[i].i;
 }
 
-void Linalg::TestOrthogonality(VECTOR<SpinorField> &evecs, const VECTOR<int> idx_to_test, const double tol)
+void Linalg::TestOrthogonality(VECTOR<BaseLinearVector> &evecs, const VECTOR<int> idx_to_test, const double tol)
 {
  ASSERT(idx_to_test.size() <= evecs.size());
   
@@ -99,8 +99,8 @@ void Linalg::TestOrthogonality(VECTOR<SpinorField> &evecs, const VECTOR<int> idx
   };
 }
 
-void Linalg::TestEigensystem(MatrixByVectorFunc F, void *args,
-                             const VECTOR<t_complex> &evals, VECTOR<SpinorField> &evecs,
+void Linalg::TestEigensystem(MatrixByVector F, void *args,
+                             const VECTOR<t_complex> &evals, VECTOR<BaseLinearVector> &evecs,
                              const VECTOR<int> idx_to_test, const double tol)
 {
   ASSERT(evals.size() == evecs.size());
@@ -109,7 +109,7 @@ void Linalg::TestEigensystem(MatrixByVectorFunc F, void *args,
   if (evecs.size() == 0)
     return;
 
-  SpinorField tmp(evecs.at(0));
+  BaseLinearVector tmp(evecs.at(0));
 
   for(uint iv = 0; iv < idx_to_test.size(); iv++)
   {
@@ -136,7 +136,7 @@ void Linalg::TestEigensystem(MatrixByVectorFunc F, void *args,
 
 }
 
-void Linalg::GrammSchmidt(const VECTOR<int> &vec_idx, VECTOR<SpinorField> &vecs)
+void Linalg::GrammSchmidt(const VECTOR<int> &vec_idx, VECTOR<BaseLinearVector> &vecs)
 {
   ASSERT(vec_idx.size() <= vecs.size());
 
@@ -149,13 +149,13 @@ void Linalg::GrammSchmidt(const VECTOR<int> &vec_idx, VECTOR<SpinorField> &vecs)
   {
     int idx_i = vec_idx.at(i);
 
-    SpinorField &v_i = vecs.at(idx_i);
+    BaseLinearVector &v_i = vecs.at(idx_i);
 
     for(int j = 0; j < i; j++)
     {
       int idx_j = vec_idx.at(j);
 
-      SpinorField &u_j = vecs.at(idx_j);
+      BaseLinearVector &u_j = vecs.at(idx_j);
 
       u_j.Add_bB(-1.0 * (v_i * u_j) / v_i.NormSqr(), v_i);
     }

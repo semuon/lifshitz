@@ -59,8 +59,8 @@
 
 // This is algorithm from Jegerlehner, B. , http://arxiv.org/abs/hep-lat/9612014, indexes in last line changed i->i+1
 // F|solution > = |source > , |solution > = F^-1 |source>
-void Linalg::MultishiftCG(Linalg::MatrixByVectorFunc F, void *args, const Lattice &lat, const SpinorField &source,
-                          int nsys, VECTOR<SpinorField> &solution, VECTOR<double> sigma,
+void Linalg::MultishiftCG(Linalg::MatrixByVector F, void *args, int n, const BaseLinearVector &source,
+                          int nsys, VECTOR<BaseLinearVector> &solution, VECTOR<double> sigma,
                           double tol, int imax, double &max_err, int &num_iter)
 {
   ASSERT(nsys > 0);
@@ -92,13 +92,13 @@ void Linalg::MultishiftCG(Linalg::MatrixByVectorFunc F, void *args, const Lattic
 
   pGlobalProfiler.StartTimer("MCG: memory allocations");
 
-  SpinorField chck(lat);
-  SpinorField r   (lat);
-  SpinorField Ar  (lat);
-  VECTOR<SpinorField> x_s;
-  VECTOR<SpinorField> p_s;
-  VECTOR<SpinorField> r_s;
-  VECTOR<SpinorField> q_s;
+  BaseLinearVector chck(n);
+  BaseLinearVector r   (n);
+  BaseLinearVector Ar  (n);
+  VECTOR<BaseLinearVector> x_s;
+  VECTOR<BaseLinearVector> p_s;
+  VECTOR<BaseLinearVector> r_s;
+  VECTOR<BaseLinearVector> q_s;
 
   x_s.reserve(nsys);
   p_s.reserve(nsys);
@@ -106,10 +106,10 @@ void Linalg::MultishiftCG(Linalg::MatrixByVectorFunc F, void *args, const Lattic
   q_s.reserve(nsys);
   for(i = 0; i < nsys; i++)
   {
-    x_s.emplace_back(lat);
-    p_s.emplace_back(lat);
-    r_s.emplace_back(lat);
-    q_s.emplace_back(lat);
+    x_s.emplace_back(n);
+    p_s.emplace_back(n);
+    r_s.emplace_back(n);
+    q_s.emplace_back(n);
   }
 
   pGlobalProfiler.StopTimer("MCG: memory allocations");
