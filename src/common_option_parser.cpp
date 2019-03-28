@@ -23,7 +23,7 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::ValueArg<uint> argDim("", "dim", "Number of spatial dimensions. By default is 3.", false, 3, "dimension", cmd);
     TCLAP::ValueArg<std::string> argL("", "L", "Lattice size", true, "5,5,5", "Lx,Ly,Lz", cmd);
 
-    TCLAP::ValueArg<double> argM2("", "M2", "Heavy mass scale (squared)", false, 0, "real number", cmd);
+    TCLAP::ValueArg<double> argInvM2("", "inv-M2", "Inverse of heavy mass scale M^2", false, 0, "real number", cmd);
     TCLAP::ValueArg<double> argm2("", "m2", "Mass (squared)", false, 1.0, "real number", cmd);
     TCLAP::ValueArg<double> argZ("", "Z", "Spatial derivative factor", false, 1.0, "real number", cmd);
     TCLAP::ValueArg<double> argLambda("", "lambda", "Actually, it is t'Hooft coupling lambda * N", false, 1.0, "real number", cmd);
@@ -38,7 +38,7 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
       std::exit(-1);
     }
 
-    pM2 = argM2.getValue();
+    pInvM2 = argInvM2.getValue();
     pm2 = argm2.getValue();
     pZ = argZ.getValue();
     pLambda = argLambda.getValue();
@@ -146,7 +146,7 @@ common_option_parser_PrintParameters(int argc, char **argv)
 
   pStdLogs.Write("  lambda:                                      %2.4le\n", pLambda);
   pStdLogs.Write("  m^2:                                         %2.4le\n", pm2);
-  pStdLogs.Write("  M^2:                                         %2.4le\n", pM2);
+  pStdLogs.Write("  1/M^2:                                       %2.4le\n", pInvM2);
   pStdLogs.Write("  Z:                                           %2.4le\n", pZ);
   
   option_parser_PrintParameters();

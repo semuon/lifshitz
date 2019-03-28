@@ -20,7 +20,7 @@ using std::string;
 typedef struct PhysicalParams_struct
 {
   double m2;
-  double M2;
+  double invM2;
   double Z;
   double lambda;
 } tPhysicalParams;
@@ -31,7 +31,7 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
   uint vol = lat.Volume();
 
   double m2 = params.m2;
-  double M2 = params.M2;
+  double invM2 = params.invM2;
   double Z = params.Z;
 
   ASSERT(Lop.Ncols() == vol);
@@ -42,14 +42,14 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
 
   for(uint x = 0; x < vol; x++)
   {
-    Lop(x, x) += m2 + 2.0 * epsilon(x) - 2.0 * ndim * Z + 4.0 * ndim * ndim * M2;
+    Lop(x, x) += m2 + 2.0 * epsilon(x) - 2.0 * ndim * Z + 4.0 * ndim * ndim * invM2;
 
     for(int mu = 0; mu < ndim; mu++)
     {
       uint xmu_fwd = lat.SiteIndexForward(x, mu);
       uint xmu_bwd = lat.SiteIndexBackward(x, mu);
 
-      double val = Z - 4.0 * ndim * M2;
+      double val = Z - 4.0 * ndim * invM2;
       Lop(xmu_fwd, x) += val;
       Lop(xmu_bwd, x) += val;
 
@@ -60,10 +60,10 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
         uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
         uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
 
-        Lop(xmu_fwd_nu_fwd, x) += M2;
-        Lop(xmu_fwd_nu_bwd, x) += M2;
-        Lop(xmu_bwd_nu_fwd, x) += M2;
-        Lop(xmu_bwd_nu_bwd, x) += M2;
+        Lop(xmu_fwd_nu_fwd, x) += invM2;
+        Lop(xmu_fwd_nu_bwd, x) += invM2;
+        Lop(xmu_bwd_nu_fwd, x) += invM2;
+        Lop(xmu_bwd_nu_bwd, x) += invM2;
       }
     }
   }
@@ -86,14 +86,14 @@ int main(int argc, char **argv)
   Matrix Lop(vol);
   Matrix solution_evecs(vol);
 
-  double M2 = pM2;
+  double invM2 = pInvM2;
   double m2 = pm2;
   double Z = pZ;
   double lambda = pLambda;
 
   tPhysicalParams params;
   params.lambda = lambda;
-  params.M2 = M2;
+  params.invM2 = invM2;
   params.m2 = m2;
   params.Z = Z;
 
