@@ -21,18 +21,18 @@ extern "C"
                       int*, double* ,int*, int, int, int);
 }
 
-void Linalg::Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTOR<t_complex> &evals,
+void Linalg::Arnoldi(MatrixByVector F, void *args, int n, VECTOR<t_complex> &evals,
                      int nev, double tol, int max_iter, ArnoldiMode mode)
 {
-  VECTOR<SpinorField> evecs;
+  VECTOR<BaseLinearVector> evecs;
   bool compute_evecs = false;
 
-  return Arnoldi(F, args, lat, evals, compute_evecs, evecs, nev, tol, max_iter, mode,
+  return Arnoldi(F, args, n, evals, compute_evecs, evecs, nev, tol, max_iter, mode,
                  c_default_arnoldi_ncv_factor_nom, c_default_arnoldi_ncv_factor_denom);
 }
 
-void Linalg::Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTOR<t_complex> &evals,
-                     bool compute_evecs, VECTOR<SpinorField> &evecs, int nev, double tol, int max_iter,
+void Linalg::Arnoldi(MatrixByVector F, void *args, int n, VECTOR<t_complex> &evals,
+                     bool compute_evecs, VECTOR<BaseLinearVector> &evecs, int nev, double tol, int max_iter,
                      ArnoldiMode mode, int arnoldi_ncv_factor_nom, int arnoldi_ncv_factor_denom)
 {
   ASSERT(evals.size() == (uint)nev);
@@ -42,8 +42,6 @@ void Linalg::Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTO
 
   pGlobalProfiler.StartTimer("ARNOLDI");
 
-  int n = lat.Volume() * lat.Ndirac() * lat.SUNrank();
-
   int i, ido, ncv;                  
   char bmat = 'I';            // standart eigenvalue problem 
   char which[3];
@@ -52,7 +50,7 @@ void Linalg::Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTO
   VECTOR<t_complex> workd;
   VECTOR<t_complex> workl;
   VECTOR<double>    rwork;
-  VECTOR<SpinorField> sf_workd;
+  VECTOR<BaseLinearVector> sf_workd;
   int          ldv   = n;
   int          ldz   = n;
   int   iparam[11];
@@ -113,9 +111,9 @@ void Linalg::Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTO
   sf_workd.reserve(3);
   for(i = 0; i < 3; i++)
   {
-    // Construct 3 SpinorFields upon workd memory
+    // Construct 3 vectors upon workd memory
     // We shall pass this to F
-    sf_workd.emplace_back(lat, &workd[i * n]);
+    sf_workd.emplace_back(n, &workd[i * n]);
   }
 
   pGlobalProfiler.StopTimer("ARNOLDI: memory allocations");

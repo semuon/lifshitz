@@ -29,14 +29,11 @@
 }
 
 // Standard Conjugate Residual Method
-void Linalg::CRM(Linalg::MatrixByVector F, void *args,
-                 const LinearVector &source, LinearVector &solution,
+void Linalg::CRM(Linalg::MatrixByVector F, void *args, int n,
+                 const BaseLinearVector &source, BaseLinearVector &solution,
                  double tol, int imax, double &max_err, int &num_iter)
 {
   ASSERT(source.Count() == solution.Count());
-
-  uint vol = source.Count();
-  const Lattice &lat = solution.GetLattice();
 
   int counter;
   double a, b, c, d;
@@ -48,12 +45,12 @@ void Linalg::CRM(Linalg::MatrixByVector F, void *args,
 
   pGlobalProfiler.StartTimer("CRM: memory allocations");
 
-  LinearVector x_k(lat, vol);
-  LinearVector p_k(lat, vol);
-  LinearVector r_k(lat, vol);
-  LinearVector Ar_k(lat, vol);
-  LinearVector Ap_k(lat, vol);
-  LinearVector chck(lat, vol);
+  BaseLinearVector x_k(n);
+  BaseLinearVector p_k(n);
+  BaseLinearVector r_k(n);
+  BaseLinearVector Ar_k(n);
+  BaseLinearVector Ap_k(n);
+  BaseLinearVector chck(n);
 
   pGlobalProfiler.StopTimer("CRM: memory allocations");
 

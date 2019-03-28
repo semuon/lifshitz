@@ -45,7 +45,7 @@ private:
 public:
   // Callback function for matrix by vector operations
   typedef void (*MatrixByVectorFunc)(SpinorField &out, const SpinorField &in, void *args);
-  typedef void (*MatrixByVector)(LinearVector &out, const LinearVector &in, void *args);
+  typedef void (*MatrixByVector)(BaseLinearVector &out, const BaseLinearVector &in, void *args);
 
   // Interface to LAPACK functions
   static void LapackInvert(t_complex *A, int n);
@@ -61,8 +61,8 @@ public:
 
   // Iterative algorithms
 
-  static void CRM(Linalg::MatrixByVector F, void *args,
-           const LinearVector &source, LinearVector &solution,
+  static void CRM(Linalg::MatrixByVector F, void *args, int n,
+           const BaseLinearVector &source, BaseLinearVector &solution,
            double tol, int imax, double &max_err, int &num_iter);
 
   // This is algorithm from Jegerlehner, B. , http://arxiv.org/abs/hep-lat/9612014
@@ -103,11 +103,11 @@ public:
  * \param[in] max_iter   is the maximal allowed number of Arnoldi iterations
  * \param[in] mode       defines which eigenvalues will be found:
  */
-  static void Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTOR<t_complex> &evals,
+  static void Arnoldi(MatrixByVector F, void *args, int n, VECTOR<t_complex> &evals,
                       int nev, double tol, int max_iter, ArnoldiMode mode);
 
-  static void Arnoldi(MatrixByVectorFunc F, void *args, const Lattice &lat, VECTOR<t_complex> &evals,
-                      bool compute_evecs, VECTOR<SpinorField> &evecs, int nev, double tol, int max_iter,
+  static void Arnoldi(MatrixByVector F, void *args, int n, VECTOR<t_complex> &evals,
+                      bool compute_evecs, VECTOR<BaseLinearVector> &evecs, int nev, double tol, int max_iter,
                       ArnoldiMode mode, int arnoldi_ncv_factor_nom = c_default_arnoldi_ncv_factor_nom,
                       int arnoldi_ncv_factor_denom = c_default_arnoldi_ncv_factor_denom);
 

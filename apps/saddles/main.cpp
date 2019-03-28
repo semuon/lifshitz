@@ -70,7 +70,7 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
   }
 }
 
-void main_LoperatorTimesVec(LinearVector &out, const LinearVector &in, void *args)
+void main_LoperatorTimesVec(BaseLinearVector &out, const BaseLinearVector &in, void *args)
 {
   ASSERT(args != NULL);
 
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 
   try
   {
-    Linalg::CRM(main_LoperatorTimesVec, (void *)&params, nonsense2, nonsense4, 1e-8, 100000, crm_err, crm_iter);
+    Linalg::CRM(main_LoperatorTimesVec, (void *)&params, vol, nonsense2, nonsense4, 1e-8, 100000, crm_err, crm_iter);
   }
   catch(std::exception &exc)
   {
