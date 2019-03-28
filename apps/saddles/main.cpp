@@ -117,6 +117,75 @@ void main_LoperatorTimesVec(BaseLinearVector &out, const BaseLinearVector &in, v
   }
 }
 
+void main_InvertLoperatorWithDeflation(BaseLinearVector &out, const BaseLinearVector &in, int n, tPhysicalParams &params, int deflation_nev, int arnoldi_nev, int arnoldi_max_iter)
+{
+  const double arnoldi_tol = 1e-9;
+  const double esys_test_tol = 1e-7;
+  const int arnoldi_num = 3;
+  const int arnoldi_denum = 1;
+
+  VECTOR<BaseLinearVector> arnoldi_min_evecs;
+  VECTOR<t_complex> arnoldi_min_evals(arnoldi_nev);
+  VECTOR<int> arnoldi_min_sorted_idx(arnoldi_nev);
+
+  // Allocate memory for ARNOLDI eigenvectors and eigenvalues
+  arnoldi_min_evecs.reserve(arnoldi_nev);
+  for(int i = 0; i < arnoldi_nev; i++)
+    arnoldi_min_evecs.emplace_back(n);
+
+  // Find min. eigenvalues.
+  Linalg::Arnoldi(main_LoperatorTimesVec, (void *)&params, n,
+                  arnoldi_min_evals, true, arnoldi_min_evecs, arnoldi_nev, arnoldi_tol,
+                  arnoldi_max_iter, Linalg::SmallestAbs, arnoldi_num, arnoldi_denum);
+
+  Linalg::SortEigensystem(arnoldi_min_sorted_idx, arnoldi_min_evals, Linalg::AscendingAbs);
+
+  cout << "ARNOLDI MIN EVAL = " << arnoldi_min_evals[arnoldi_min_sorted_idx[0]] << endl;
+
+  // We will check only eigenvectors and eigenvalues needed for deflation, but at least lowest eigenvalue (if deflation_nev is 0)
+  int num_to_check = MAX(1, deflation_nev);
+  VECTOR<int> idx_to_test(arnoldi_min_sorted_idx.begin(), arnoldi_min_sorted_idx.begin() + num_to_check);
+
+  try
+  {
+    Linalg::TestEigensystem(main_LoperatorTimesVec, (void *)&params,
+                            arnoldi_min_evals, arnoldi_min_evecs, idx_to_test, esys_test_tol);
+  }
+  catch (EigenTestFailure &ex)
+  {
+    std::cout << "WARNING: MIN eigenvalue test failed with message: " << ex.what() << std::endl;
+  }
+
+  // Make eigenvectors orthogonal
+  Linalg::TestOrthogonality(arnoldi_min_evecs, idx_to_test, esys_test_tol);
+
+  // Deflate
+  BaseLinearVector PY(n);
+  VECTOR<t_complex> min_uY(deflation_nev);
+
+  for(uint i = 0; i < deflation_nev; i++)
+  {
+    uint evec_idx = arnoldi_min_sorted_idx[i];
+    min_uY[i] = (arnoldi_min_evecs[evec_idx] * in);
+  }
+
+  PY = in;
+  for(uint i = 0; i < deflation_nev; i++)
+  {
+    uint evec_idx = arnoldi_min_sorted_idx[i];
+    PY.Add_bB(-1.0 * min_uY[i], arnoldi_min_evecs[evec_idx]);
+  }
+
+  int crm_iter;
+  double crm_err;
+
+  Linalg::CRM(main_LoperatorTimesVec, (void *)&params, n, PY, out, 1e-8, 100000, crm_err, crm_iter);
+
+  cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
+
+  //sq_min = fabs(real(arnoldi_min_evals[arnoldi_min_sorted_idx[0]]));
+}
+
 int main(int argc, char **argv)
 {
   common_AppInit(argc, argv, "Lifshitz regime");
@@ -192,13 +261,28 @@ int main(int argc, char **argv)
 
   pGlobalProfiler.StartTimer("LAPACK");
   main_Loperator(Lop, lat, nonsense, params);
-  Linalg::LapackInvert(Lop, vol);
+  Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
+  //Linalg::LapackInvert(Lop, vol);
   nonsense3 = Lop * nonsense2;
   pGlobalProfiler.StopTimer("LAPACK");
 
+  double minnnnnn = evals[0];
+  for(uint x = 1; x < vol; x++)
+    if (fabs(evals[x]) < fabs(minnnnnn))
+      minnnnnn = evals[x];
+  cout << "LAPACK MIN ABS EVAL = " << minnnnnn << endl;
+
   try
   {
-    Linalg::CRM(main_LoperatorTimesVec, (void *)&params, vol, nonsense2, nonsense4, 1e-8, 100000, crm_err, crm_iter);
+    pGlobalProfiler.StartTimer("WITH DEFLATION");
+    main_InvertLoperatorWithDeflation(nonsense4, nonsense2, vol, params, 16, 16, 1000000);
+    pGlobalProfiler.StopTimer("WITH DEFLATION");
+    pGlobalProfiler.StartTimer("WITHOUT DEFLATION");
+    Linalg::CRM(main_LoperatorTimesVec, (void *)&params, vol, nonsense2, nonsense4, 1e-8, 1000000, crm_err, crm_iter);
+    cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
+    //main_InvertLoperatorWithDeflation(nonsense4, nonsense2, vol, params, 0, 16, 100000);
+    pGlobalProfiler.StopTimer("WITH DEFLATION");
+    //Linalg::CRM(main_LoperatorTimesVec, (void *)&params, vol, nonsense2, nonsense4, 1e-8, 100000, crm_err, crm_iter);
   }
   catch(std::exception &exc)
   {
@@ -209,7 +293,7 @@ int main(int argc, char **argv)
   nonsense5 = nonsense4 - nonsense3;
   cout << endl;
   cout << "DISCREPANCY = " << nonsense5.Norm() << endl;
-  cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
+  //cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
   cout << endl;
   pGlobalProfiler.EndSection("TEST");
 
