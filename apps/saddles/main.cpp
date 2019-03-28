@@ -112,11 +112,11 @@ int main(int argc, char **argv)
   solution.Clear();
   depsilon.Clear();
 
-  int n_iters = 1;
-  int n_tries = 1;
-  double tolerance = 10^-8;
-  double relax_alpha = 0.5;
-  double random_range = 10.0;
+  int n_iters = pNiters;
+  int n_tries = pNtries;
+  double tolerance = pTolerance;
+  double relax_alpha = pRelaxAlpha;
+  double random_range = pRandomRange;
 
   t_complex solution_action = 0;
   t_complex solution_action0 = 0;
