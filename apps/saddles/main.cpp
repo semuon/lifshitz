@@ -158,9 +158,15 @@ int main(int argc, char **argv)
       }
 
       depsilon = epsilon1 - epsilon0;
-      epsilon0 = epsilon1;
+      epsilon0 = (1.0 - relax_alpha) * epsilon0 + relax_alpha * epsilon1;
 
       double de = depsilon.Norm();
+
+      if (isinf(de) || isnan(de))
+      {
+        pStdLogs.Write("Encoutered numerical nonsense at iteration: %d\n", i_iter);
+        break;
+      }
 
       if (de <= tolerance)
       {
@@ -183,7 +189,7 @@ int main(int argc, char **argv)
       Lop.Transpose();
 
       for(uint n = 0; n < vol; n++)
-        action1 += lambda * log(evals[n]) / 2.0;
+        action1 += lambda * log((t_complex)evals[n]) / 2.0;
 
       action = action0 + action1;
 
@@ -196,6 +202,8 @@ int main(int argc, char **argv)
         solution_action = action;
         solution_action0 = action0;
         solution_action1 = action1;
+
+        pStdLogs.Write("Found solution at try #%d with the action: (%2.15le, %2.15le)\n", i_try, real(action), imag(action));
 
         is_solution_found = true;
       }
@@ -216,8 +224,8 @@ int main(int argc, char **argv)
     f_loperator = pDataDir.OpenFile(loperator_name, f_bin_attr);
     f_solution = pDataDir.OpenFile(solution_name, f_bin_attr);
 
-    Formats::DumpBinary(f_loperator, evals);
-    Formats::DumpBinary(f_loperator, Lop);
+    Formats::DumpBinary(f_loperator, solution_evals);
+    Formats::DumpBinary(f_loperator, solution_evecs);
 
     SAFE_FWRITE(&solution_action, sizeof(t_complex), 1, f_solution);
     SAFE_FWRITE(&solution_action0, sizeof(t_complex), 1, f_solution);
@@ -230,6 +238,7 @@ int main(int argc, char **argv)
 
   int64_t end = Utils::GetTimeMs64();
 
+  cout << endl;
   cout << "Program realized in " << (1.0 * end - 1.0 * begin) / 1000. << " s" << endl;
 
   common_AppFin();
