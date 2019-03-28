@@ -13,10 +13,14 @@ private:
   Formats() {}
 
 public:
-  template <class T> static void DumpBinary(FILE *f, const double t, const TBaseLinearVector<T> &field)
+  template <class T> static void DumpBinary(FILE *f, const TBaseLinearVector<T> &field)
   {
-    SAFE_FWRITE(&t, sizeof(double), 1, f);
     SAFE_FWRITE(field.DataPtr(), sizeof(T), field.Count(), f);
+  }
+
+  template <class T> static void DumpBinary(FILE *f, const VECTOR<T> &field)
+  {
+    SAFE_FWRITE(field.data(), sizeof(T), field.size(), f);
   }
 
   static void PrintMatrix(FILE *f, const Matrix &m);

@@ -42,7 +42,7 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
 
   for(uint x = 0; x < vol; x++)
   {
-    Lop(x, x) += m2 - 2.0 * I * epsilon(x) - 2.0 * ndim * Z + 4.0 * ndim * ndim * M2;
+    Lop(x, x) += m2 + 2.0 * epsilon(x) - 2.0 * ndim * Z + 4.0 * ndim * ndim * M2;
 
     for(int mu = 0; mu < ndim; mu++)
     {
@@ -84,37 +84,148 @@ int main(int argc, char **argv)
   uint vol = lat.Volume();
 
   Matrix Lop(vol);
+  Matrix solution_evecs(vol);
+
+  double M2 = pM2;
+  double m2 = pm2;
+  double Z = pZ;
+  double lambda = pLambda;
 
   tPhysicalParams params;
-  params.lambda = pLambda;
-  params.M2 = pM2;
-  params.m2 = pm2;
-  params.Z = pZ;
+  params.lambda = lambda;
+  params.M2 = M2;
+  params.m2 = m2;
+  params.Z = Z;
 
-  ScalarField epsilon(lat);
+  ScalarField epsilon0(lat);
+  ScalarField epsilon1(lat);
+  ScalarField solution(lat);
+  ScalarField depsilon(lat);
+
+  VECTOR<double> evals(vol);
+  VECTOR<double> solution_evals(vol);
 
   Lop.Clear();
-  epsilon.Clear();
+  solution_evecs.Clear();
+  epsilon0.Clear();
+  epsilon1.Clear();
+  solution.Clear();
+  depsilon.Clear();
 
-  main_Loperator(Lop, lat, epsilon, params);
+  int n_iters = 1;
+  int n_tries = 1;
+  double tolerance = 10^-8;
+  double relax_alpha = 0.5;
+  double random_range = 10.0;
 
-  const string vector_current_name = "Loperator.txt";
+  t_complex solution_action = 0;
+  t_complex solution_action0 = 0;
+  t_complex solution_action1 = 0;
+
+  bool is_solution_found = false;
+
+  for(int i_try = 0; i_try < n_tries; i_try++)
+  {
+    bool is_converged = false;
+
+    for(uint x = 0; x < vol; x++)
+    {
+      epsilon0(x) = rand_double(-random_range, random_range);
+      //epsilon0(x) = 1.0 * x;
+    }
+
+    for(int i_iter = 0; i_iter < n_iters; i_iter++)
+    {
+      main_Loperator(Lop, lat, epsilon0, params);
+      Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
+      Lop.Transpose();
+
+      for(uint n = 0; n < vol; n++)
+      {
+        if (abs(evals[n]) < __FLT_EPSILON__)
+        {
+          pStdLogs.Write("Zero eigenvalue detected at try #%d, iteration #%d: e[%u] = %2.15le\n", i_try, i_iter, n, evals[n]);
+          break;
+        }
+      }
+
+      for(uint x = 0; x < vol; x++)
+      {
+        epsilon1(x) = 0;
+
+        for(uint n = 0; n < vol; n++)
+          epsilon1(x) += lambda * norm(Lop(n, x)) / (2.0 * evals[n]);
+      }
+
+      depsilon = epsilon1 - epsilon0;
+      epsilon0 = epsilon1;
+
+      double de = depsilon.Norm();
+
+      if (de <= tolerance)
+      {
+        is_converged = true;
+        break;
+      }
+    }
+
+    if (is_converged)
+    {
+      t_complex action = 0;
+      t_complex action0 = 0;
+      t_complex action1 = 0;
+
+      for(uint x = 0; x < vol; x++)
+        action0 -= epsilon0(x) * epsilon0(x) / (double) vol;
+
+      main_Loperator(Lop, lat, epsilon0, params);
+      Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
+      Lop.Transpose();
+
+      for(uint n = 0; n < vol; n++)
+        action1 += lambda * log(evals[n]) / 2.0;
+
+      action = action0 + action1;
+
+      if (!is_solution_found || (real(solution_action) > real(action)))
+      {
+        solution = epsilon0;
+        solution_evecs = Lop;
+        solution_evals = evals;
+
+        solution_action = action;
+        solution_action0 = action0;
+        solution_action1 = action1;
+
+        is_solution_found = true;
+      }
+    }
+  }
+
+  const string loperator_name = "Loperator.bin";
+  const string solution_name = "solution.bin";
  
   FILE *f_loperator = NULL;
+  FILE *f_solution = NULL;
 
   if (ModuleMPI::IsMasterNode())
   {
     const string f_bin_attr = "wb";
     const string f_txt_attr = "w";
 
-    f_loperator = pDataDir.OpenFile(vector_current_name, f_txt_attr);
+    f_loperator = pDataDir.OpenFile(loperator_name, f_bin_attr);
+    f_solution = pDataDir.OpenFile(solution_name, f_bin_attr);
 
-    Formats::PrintMatrix(f_loperator, Lop);
-  }
+    Formats::DumpBinary(f_loperator, evals);
+    Formats::DumpBinary(f_loperator, Lop);
 
-  if (ModuleMPI::IsMasterNode())
-  {
+    SAFE_FWRITE(&solution_action, sizeof(t_complex), 1, f_solution);
+    SAFE_FWRITE(&solution_action0, sizeof(t_complex), 1, f_solution);
+    SAFE_FWRITE(&solution_action1, sizeof(t_complex), 1, f_solution);
+    Formats::DumpBinary(f_solution, solution);
+
     fclose(f_loperator);
+    fclose(f_solution);
   }
 
   int64_t end = Utils::GetTimeMs64();
