@@ -46,7 +46,8 @@ endif
 # Apps dir
 APPS_DIR	=	./apps
 # Source dirs
-SRC_DIRS	=	./src
+SRC_DIRS	=	./src \
+                ./src/linalg
 # Objects dir
 OBJ_DIR		=	./obj
 # Binaries dir
