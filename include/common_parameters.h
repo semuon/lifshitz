@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+const double c_flt_epsilon = __FLT_EPSILON__;
+
 extern uint pDim;
 extern uint pNumDiagDims;
 extern VECTOR<uint> pL;

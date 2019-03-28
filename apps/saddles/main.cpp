@@ -235,7 +235,7 @@ int main(int argc, char **argv)
 
       for(uint n = 0; n < vol; n++)
       {
-        if (abs(evals[n]) < __FLT_EPSILON__)
+        if (fabs(evals[n]) < c_flt_epsilon)
         {
           pStdLogs.Write("Zero eigenvalue detected at try #%d, iteration #%d: e[%u] = %2.15le\n", i_try, i_iter, n, evals[n]);
           break;
