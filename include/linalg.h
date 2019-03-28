@@ -61,7 +61,7 @@ public:
 
   // Iterative algorithms
 
-  void CRM(Linalg::MatrixByVector F, void *args,
+  static void CRM(Linalg::MatrixByVector F, void *args,
            const LinearVector &source, LinearVector &solution,
            double tol, int imax, double &max_err, int &num_iter);
 

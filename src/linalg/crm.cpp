@@ -10,6 +10,7 @@
         std::cout << "==================================================" << std::endl; \
         std::cout << "    requested tolerance: " << tol << std::endl; \
         std::cout << "    step: " << counter << std::endl; \
+        std::cout << "    err: " << err << std::endl; \
         std::cout << "    a: " << a << std::endl; \
         std::cout << "    b: " << b << std::endl; \
         std::cout << "    c: " << c << std::endl; \
@@ -108,7 +109,7 @@ void Linalg::CRM(Linalg::MatrixByVector F, void *args,
     b = d / c;
     CR_ASSERT(std::isfinite(b));
 
-    p_k.Assign_bB_plus_cC(1.0, r_k, b, p_k);
+    p_k.Assign_aA_plus_bB(b, 1.0, r_k);
   }
 
   num_iter = counter;
@@ -117,6 +118,7 @@ void Linalg::CRM(Linalg::MatrixByVector F, void *args,
 
   if (!is_converged)
   {
+    PRINT_CR_STATE;
     THROW_EXCEPTION(CGFailure, "Conjugate Residual Method was not able to find solution within given number of iterations");
   }
 }

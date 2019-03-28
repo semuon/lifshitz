@@ -185,14 +185,35 @@ int main(int argc, char **argv)
     nonsense2(x) = rand_double(-10,10);
   }
 
+  pGlobalProfiler.StartSection("TEST");
+  int crm_iter;
+  double crm_err;
   params.epsilon = &nonsense;
+
+  pGlobalProfiler.StartTimer("LAPACK");
   main_Loperator(Lop, lat, nonsense, params);
+  Linalg::LapackInvert(Lop, vol);
   nonsense3 = Lop * nonsense2;
-  main_LoperatorTimesVec(nonsense4, nonsense2, (void*)&params);
+  pGlobalProfiler.StopTimer("LAPACK");
+
+  try
+  {
+    Linalg::CRM(main_LoperatorTimesVec, (void *)&params, nonsense2, nonsense4, 1e-8, 100000, crm_err, crm_iter);
+  }
+  catch(std::exception &exc)
+  {
+    cout  << "CRM failed to converge: " << exc.what() << endl;
+  }
+
+  //main_LoperatorTimesVec(nonsense4, nonsense2, (void*)&params);
   nonsense5 = nonsense4 - nonsense3;
   cout << endl;
   cout << "DISCREPANCY = " << nonsense5.Norm() << endl;
+  cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
   cout << endl;
+  pGlobalProfiler.EndSection("TEST");
+
+  pGlobalProfiler.PrintStatistics();
 
   bool is_solution_found = false;
 
