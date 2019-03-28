@@ -26,7 +26,7 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::ValueArg<double> argInvM2("", "inv-M2", "Inverse of heavy mass scale M^2", false, 0, "real number", cmd);
     TCLAP::ValueArg<double> argm2("", "m2", "Mass (squared)", false, 1.0, "real number", cmd);
     TCLAP::ValueArg<double> argZ("", "Z", "Spatial derivative factor", false, 1.0, "real number", cmd);
-    TCLAP::ValueArg<double> argLambda("", "lambda", "Actually, it is t'Hooft coupling lambda * N", false, 1.0, "real number", cmd);
+    TCLAP::ValueArg<double> argLambda("", "lambda-N", "t'Hooft coupling lambda * N", false, 1.0, "real number", cmd);
 
     try
     {
@@ -144,7 +144,7 @@ common_option_parser_PrintParameters(int argc, char **argv)
 
   pStdLogs.Write("  Dim:                                         %d\n", pDim);
 
-  pStdLogs.Write("  lambda:                                      %2.4le\n", pLambda);
+  pStdLogs.Write("  lambda*N:                                    %2.4le\n", pLambda);
   pStdLogs.Write("  m^2:                                         %2.4le\n", pm2);
   pStdLogs.Write("  1/M^2:                                       %2.4le\n", pInvM2);
   pStdLogs.Write("  Z:                                           %2.4le\n", pZ);
