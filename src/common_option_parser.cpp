@@ -21,7 +21,7 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::ValueArg<std::string> argLogsDir("", "logs-dir", "Directory for log files. By default stdout and stderr are used.", false, "", "path", cmd);
     TCLAP::ValueArg<std::string> argDataDir("", "data-dir", "Directory for data files. By default current directory is used.", false, ".", "path", cmd);
     TCLAP::ValueArg<uint> argDim("", "dim", "Number of spatial dimensions. By default is 3.", false, 3, "dimension", cmd);
-    TCLAP::ValueArg<std::string> argL("", "L", "Lattice size", true, "5,5,5", "Lx,Ly,Lz", cmd);
+    TCLAP::ValueArg<std::string> argL("", "L", "Lattice size", true, "5,5,5", "L1,L2,L3,...", cmd);
 
     TCLAP::ValueArg<double> argInvM2("", "inv-M2", "Inverse of heavy mass scale M^2", false, 0, "real number", cmd);
     TCLAP::ValueArg<double> argm2("", "m2", "Mass (squared)", false, 1.0, "real number", cmd);
