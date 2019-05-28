@@ -41,7 +41,7 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     pInvM2 = argInvM2.getValue();
     pm2 = argm2.getValue();
     pZ = argZ.getValue();
-    pLambda = argLambda.getValue();
+    pLambdaN = argLambda.getValue();
 
     pLogsDirPath = argLogsDir.getValue();
     pDataDirPath = argDataDir.getValue();
@@ -144,7 +144,7 @@ common_option_parser_PrintParameters(int argc, char **argv)
 
   pStdLogs.Write("  Dim:                                         %d\n", pDim);
 
-  pStdLogs.Write("  lambda*N:                                    %2.4le\n", pLambda);
+  pStdLogs.Write("  lambda*N:                                    %2.4le\n", pLambdaN);
   pStdLogs.Write("  m^2:                                         %2.4le\n", pm2);
   pStdLogs.Write("  1/M^2:                                       %2.4le\n", pInvM2);
   pStdLogs.Write("  Z:                                           %2.4le\n", pZ);

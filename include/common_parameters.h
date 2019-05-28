@@ -9,7 +9,7 @@ extern uint pDim;
 extern uint pNumDiagDims;
 extern VECTOR<uint> pL;
 
-extern double pLambda;
+extern double pLambdaN;
 extern double pInvM2;
 extern double pm2;
 extern double pZ;

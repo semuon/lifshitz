@@ -229,7 +229,7 @@ int main(int argc, char **argv)
   double invM2 = pInvM2;
   double m2 = pm2;
   double Z = pZ;
-  double lambda = pLambda;
+  double lambda = pLambdaN;
 
   ScalarField epsilon0(lat);
   ScalarField epsilon1(lat);
