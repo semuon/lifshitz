@@ -43,29 +43,21 @@ void main_Loperator(Matrix &Lop, const Lattice &lat, const ScalarField &epsilon,
 
   for(uint x = 0; x < vol; x++)
   {
-    Lop(x, x) += m2 + 2.0 * epsilon(x) + 2.0 * ndim * Z + 4.0 * ndim * ndim * invM2;
+    Lop(x, x) += m2 + 2.0 * epsilon(x) + 2.0 * ndim * Z + 6.0 * ndim * invM2;
 
     for(int mu = 0; mu < ndim; mu++)
     {
       uint xmu_fwd = lat.SiteIndexForward(x, mu);
       uint xmu_bwd = lat.SiteIndexBackward(x, mu);
+      uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
+      uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
 
-      double val = -Z - 4.0 * ndim * invM2;
+      double val = -Z - 4.0 * invM2;
       Lop(xmu_fwd, x) += val;
       Lop(xmu_bwd, x) += val;
 
-      for(int nu = 0; nu < ndim; nu++)
-      {
-        uint xmu_fwd_nu_fwd = lat.SiteIndexForward(xmu_fwd, nu);
-        uint xmu_fwd_nu_bwd = lat.SiteIndexBackward(xmu_fwd, nu);
-        uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
-        uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
-
-        Lop(xmu_fwd_nu_fwd, x) += invM2;
-        Lop(xmu_fwd_nu_bwd, x) += invM2;
-        Lop(xmu_bwd_nu_fwd, x) += invM2;
-        Lop(xmu_bwd_nu_bwd, x) += invM2;
-      }
+      Lop(x2mu_fwd, x) += invM2;
+      Lop(x2mu_bwd, x) += invM2;
     }
   }
 }
@@ -340,16 +332,16 @@ int main(int argc, char **argv)
     for(uint x = 0; x < vol; x++)
     {
       epsilon0(x) = rand_double(-random_range, random_range);
-      epsilon0(x) = 1.0 * x;
+      //epsilon0(x) = 1.0 * x;
     }
 
     for(int i_iter = 0; i_iter < n_iters; i_iter++)
     {
       main_Loperator(Lop, lat, epsilon0, params);
-      FILE *fff = pDataDir.OpenFile("M.txt", "w");
-      Formats::PrintMatrix(fff, Lop);
-      fclose(fff);
-      return 0;
+      //FILE *fff = pDataDir.OpenFile("M.txt", "w");
+      //Formats::PrintMatrix(fff, Lop);
+      //fclose(fff);
+      //return 0;
 
       Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
       Lop.Transpose();

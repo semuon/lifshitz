@@ -73,6 +73,6 @@ public:
 };
 
 typedef TScalarFieldN<t_complex> ScalarFieldN;
-typedef TScalarFieldN<double> RealScalaFieldN;
+typedef TScalarFieldN<double> RealScalarFieldN;
 
 #endif /* SCALAR_FIELD_N_H_ */ 
