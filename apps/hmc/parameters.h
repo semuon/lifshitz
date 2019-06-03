@@ -3,4 +3,11 @@
 
 #include <common.h>
 
+typedef enum EnumStartConfigurationType
+{
+  START_CONFIGURATION_ZERO = 0,
+  START_CONFIGURATION_RANDOM = 1,
+  START_CONFIGURATION_LOAD = 2
+}tStartConfigurationType;
+
 #endif
