@@ -24,6 +24,33 @@ typedef struct PhysicalParams_struct
   double kappa;
 } tPhysicalParams;
 
+double main_VectorMean(const VECTOR<double> &vec)
+{
+  double mean = 0;
+  int vec_size = vec.size();
+
+  for(int i = 0; i < vec_size; i++)
+    mean += vec[i] / vec_size;
+
+  return mean;
+}
+
+double main_VectorSigma(const VECTOR<double> &vec)
+{
+  double sigma = 0;
+  int vec_size = vec.size();
+
+  if (vec_size > 1)
+  {
+    double mean = main_VectorMean(vec);
+
+    for(int i = 0; i < vec_size; i++)
+      sigma += (vec[i] - mean) * (vec[i] - mean) / (vec_size - 1);
+  }
+
+  return sqrt(sigma);
+}
+
 double main_Action(const tPhysicalParams &params, const RealScalarFieldN &phi)
 {
   pGlobalProfiler.StartTimer("Action");
@@ -138,6 +165,63 @@ void main_HMCforce(const tPhysicalParams &params, const RealScalarFieldN &phi, R
   pGlobalProfiler.StopTimer("HMC Force");
 }
 
+void main_HMCevolve(const tPhysicalParams &params, const double dt, const int num_steps,
+                    RealScalarFieldN &phi, RealScalarFieldN &pi)
+{
+  pGlobalProfiler.StartTimer("HMC Trajectory");
+
+  double n = params.N;
+
+  ASSERT(n == phi.N());
+  ASSERT(n == pi.N());
+  ASSERT(phi.GetLattice() == pi.GetLattice());
+
+  const Lattice &lat = phi.GetLattice();
+
+  uint vol = lat.Volume();
+
+  RealScalarFieldN force(lat, n);
+
+  // First step of leapfrog
+  for(uint i = 0; i < n * vol; i++)
+    phi[i] += pi[i] * dt / 2.0;
+
+  main_HMCforce(params, phi, force);
+
+  for(uint i = 0; i < n * vol; i++)
+    pi[i] -= force[i] * dt;
+
+  //  pStdLogs.Write("\nforce = %2.15le\n", force.Norm());
+  //pStdLogs.Write("phi = %2.15le\n", phi.Norm());
+  //pStdLogs.Write("pi = %2.15le\n\n", pi.Norm());
+
+  // Intermediate steps of leapfrog
+  for(int step_idx = 0; step_idx < num_steps - 1; step_idx++)
+  {
+    for(uint i = 0; i < n * vol; i++)
+      phi[i] += pi[i] * dt;
+
+    main_HMCforce(params, phi, force);
+
+    for(uint i = 0; i < n * vol; i++)
+      pi[i] -= force[i] * dt;
+
+  //    pStdLogs.Write("\nforce = %2.15le\n", force.Norm());
+  //pStdLogs.Write("phi = %2.15le\n", phi.Norm());
+  //pStdLogs.Write("pi = %2.15le\n\n", pi.Norm());
+  }
+
+  // Last step of leapfrog
+  for(uint i = 0; i < n * vol; i++)
+    phi[i] += pi[i] * dt / 2.0;
+
+  //  pStdLogs.Write("\nforce = %2.15le\n", force.Norm());
+  //pStdLogs.Write("phi = %2.15le\n", phi.Norm());
+  //pStdLogs.Write("pi = %2.15le\n\n", pi.Norm());
+
+  pGlobalProfiler.StopTimer("HMC Trajectory");
+}
+
 int main(int argc, char **argv)
 {
   const string f_bin_attr = "wb";
@@ -162,13 +246,20 @@ int main(int argc, char **argv)
   double n = 1;
   double kappa = 0;
 
-  double hmc_dt = 0.05;
-  int hmc_num_steps = 20;
-  int hmc_num_traj = 20;
+  double hmc_dt = pHmcDt;
+  int hmc_num_steps = pHmcNumSteps;
+  int hmc_num_conf = pHmcNumConf;
 
+  int hmc_num_accepted = 0;
   double hmc_accept_rate = 0;
   double hmc_avg_dh = 0;
   double hmc_avg_exp_dh = 0;
+
+  VECTOR<double> dh_history;
+  VECTOR<double> exp_dh_history;
+
+  dh_history.reserve(hmc_num_conf);
+  exp_dh_history.reserve(hmc_num_conf);
 
   tStartConfigurationType start_type = START_CONFIGURATION_RANDOM;
 
@@ -222,7 +313,7 @@ int main(int argc, char **argv)
 
   pStdLogs.Write("\n\nHMC BEGIN\n\n");
 
-  for(int traj_idx = 0; traj_idx < hmc_num_traj; traj_idx++)
+  for(int traj_idx = 0; traj_idx < hmc_num_conf; traj_idx++)
   {
     double h0 = 0;
     double h1 = 0;
@@ -231,6 +322,8 @@ int main(int argc, char **argv)
     pGlobalProfiler.StartSection("HMC Trajectory");
 
     // Initialize hmc and compute initial hamiltonian h0
+    phi_field_1 = phi_field_0;
+
     for(uint i = 0; i < n * vol; i++)
     {
       pi_field[i] = rand_gauss_double(0, 1);
@@ -238,42 +331,75 @@ int main(int argc, char **argv)
       h0 += pi_field[i] * pi_field[i] / 2.0;
     }
 
-    phi_field_1 = phi_field_0;
-
     h0 += main_Action(params, phi_field_1);
 
-    // First step of leapfrog
-    main_HMCforce(params, phi_field_1, phi_force);
+    pStdLogs.Write("h0 = %2.15le\n", h0);
+
+    main_HMCevolve(params, hmc_dt, hmc_num_steps, phi_field_1, pi_field);
+
+    //RealScalarFieldN ppp0(lat, n);
+    //RealScalarFieldN ppp1(lat, n);
+    //RealScalarFieldN ppp2(lat, n);
+    //RealScalarFieldN vvv0(lat, n);
+    //RealScalarFieldN vvv1(lat, n);
+    //RealScalarFieldN vvv2(lat, n);
+
+    //ppp0 = pi_field;
+    //vvv0 = phi_field_1;
+
+    //ppp2 = ppp0;
+    //vvv2 = vvv0;
+
+    /*pStdLogs.Write("\ninitial pi:\n");
+    for(uint i = 0; i < n * vol; i++)
+      pStdLogs.Write("%2.4le\t", ppp2[i]);
+    pStdLogs.Write("\n");
+    pStdLogs.Write("initial phi:\n");
+    for(uint i = 0; i < n * vol; i++)
+      pStdLogs.Write("%2.4le\t", vvv2[i]);
+    pStdLogs.Write("\n\n");*/
+
+    //main_HMCevolve(params, hmc_dt, hmc_num_steps, vvv2, ppp2);
+
+    /*pStdLogs.Write("final pi:\n");
+    for(uint i = 0; i < n * vol; i++)
+      pStdLogs.Write("%2.4le\t", ppp2[i]);
+    pStdLogs.Write("\n");
+    pStdLogs.Write("final phi:\n");
+    for(uint i = 0; i < n * vol; i++)
+      pStdLogs.Write("%2.4le\t", vvv2[i]);
+    pStdLogs.Write("\n\n");*/
+
+    //ppp1 = ppp2;
+    //vvv1 = vvv2;
+
+    //for(uint i = 0; i < n * vol; i++)
+    //  ppp2[i] = -1.0 * ppp2[i];
+
+    //main_HMCevolve(params, hmc_dt, hmc_num_steps, vvv2, ppp2);
+
+    /*pStdLogs.Write("back pi:\n");
+    for(uint i = 0; i < n * vol; i++)
+      pStdLogs.Write("%2.4le\t", ppp2[i]);
+    pStdLogs.Write("\n");
+    pStdLogs.Write("back phi:\n");
+    for(uint i = 0; i < n * vol; i++)
+      pStdLogs.Write("%2.4le\t", vvv2[i]);
+    pStdLogs.Write("\n\n");*/
+
+    //pStdLogs.Write("\n|pi0 - pi2| = %2.15le\n\n", (ppp0 + ppp2).Norm());
+    //pStdLogs.Write("\n|pi1 - pi2| = %2.15le\n\n", (ppp1 + ppp2).Norm());
+    //pStdLogs.Write("\n|phi0 - phi2| = %2.15le\n\n", (vvv0 - vvv2).Norm());
+    //pStdLogs.Write("\n|phi1 - phi2| = %2.15le\n\n", (vvv1 - vvv2).Norm());
 
     for(uint i = 0; i < n * vol; i++)
-    {
-      pi_field[i] -= phi_force[i] * hmc_dt / 2.0;
-      phi_field_1[i] += pi_field[i] * hmc_dt;
-    }
-
-    // Intermediate steps of leapfrog
-    for(int step_idx = 0; step_idx < hmc_num_steps - 1; step_idx++)
-    {
-      main_HMCforce(params, phi_field_1, phi_force);
-
-      for(uint i = 0; i < n * vol; i++)
-      {
-        pi_field[i] -= phi_force[i] * hmc_dt;
-        phi_field_1[i] += pi_field[i] * hmc_dt;
-      }
-    }
-
-    // Last step of leapfrog and computation of final hamiltonian h1
-    main_HMCforce(params, phi_field_1, phi_force);
-
-    for(uint i = 0; i < n * vol; i++)
-    {
-      pi_field[i] -= phi_force[i] * hmc_dt / 2.0;
-
       h1 += pi_field[i] * pi_field[i] / 2.0;
-    }
 
     traj_action = main_Action(params, phi_field_1);
+
+    pStdLogs.Write("h1 pi = %2.15le\n", h1);
+    pStdLogs.Write("h1 action = %2.15le\n", traj_action);
+
     h1 += traj_action;
 
     // Accept/reject step
@@ -297,10 +423,16 @@ int main(int argc, char **argv)
     if(accepted)
     {
       phi_field_0 = phi_field_1;
-      hmc_accept_rate += 1.0 / hmc_num_traj;
 
-      hmc_avg_dh += hmc_dh / hmc_num_traj;
-      hmc_avg_exp_dh += exp(-hmc_dh) / hmc_num_traj;
+      hmc_accept_rate += 1.0 / hmc_num_conf;
+
+      dh_history.push_back(hmc_dh);
+      exp_dh_history.push_back(exp(-hmc_dh));
+
+      //hmc_avg_dh = (hmc_avg_dh * hmc_num_accepted + hmc_dh) / (hmc_num_accepted + 1.0);
+      //hmc_avg_exp_dh = (hmc_avg_exp_dh * hmc_num_accepted + exp(-hmc_dh)) / (hmc_num_accepted + 1.0);
+
+      hmc_num_accepted++;
 
       pStdLogs.Write("status: ACCEPTED\n");
       pStdLogs.Write("action = %2.15le\n", traj_action);
@@ -318,8 +450,11 @@ int main(int argc, char **argv)
   pGlobalProfiler.PrintStatistics();
 
   pStdLogs.Write("\n\nHMC COMPLETED\n\n");
-  pStdLogs.Write("<exp(dh)> = %2.15le\n", hmc_avg_exp_dh);
-  pStdLogs.Write("<dh> = %2.15le\n\n", hmc_avg_dh);
+
+  pStdLogs.Write("Num. accepted: %d\n", hmc_num_accepted);
+  pStdLogs.Write("Acceptance rate: %2.15le\n", hmc_accept_rate);
+  pStdLogs.Write("<exp(dh)> = %2.15le +/- %2.15le\n", main_VectorMean(exp_dh_history), main_VectorSigma(exp_dh_history));
+  pStdLogs.Write("<dh> = %2.15le +/- %2.15le\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
 
   pStdLogs.Write("Action: %2.15le", action);
   FILE *f = pDataDir.OpenFile("test.bin", "wb");
