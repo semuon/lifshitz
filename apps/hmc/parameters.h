@@ -10,4 +10,8 @@ typedef enum EnumStartConfigurationType
   START_CONFIGURATION_LOAD = 2
 }tStartConfigurationType;
 
+extern int pHmcNumSteps;
+extern double pHmcDt;
+extern int pHmcNumConf;
+
 #endif
