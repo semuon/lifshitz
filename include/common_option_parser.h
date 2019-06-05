@@ -18,7 +18,7 @@ void common_option_parser_PrintParameters(int argc, char **argv);
 // If value of some parameter is wrong then WrongCmdLineOption should be thrown (see below)
 extern void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv);
 
-// This function should print out all application cpecific parameters to main log  
+// This function should print out all application specific parameters to main log  
 extern void option_parser_PrintParameters();
 
 // ==========================================================
