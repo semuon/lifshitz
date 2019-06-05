@@ -10,8 +10,15 @@ typedef enum EnumStartConfigurationType
   START_CONFIGURATION_LOAD = 2
 }tStartConfigurationType;
 
+extern int pN;
+extern double pKappa;
+
+extern tStartConfigurationType pStartType;
+extern std::string pFnameStartConf;
+
 extern int pHmcNumSteps;
 extern double pHmcDt;
 extern int pHmcNumConf;
+extern int pHmcNumConfStep;
 
 #endif

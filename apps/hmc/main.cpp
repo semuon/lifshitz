@@ -233,17 +233,17 @@ int main(int argc, char **argv)
   double m2 = pm2;
   double Z = pZ;
   double lambdaN = pLambdaN;
-  double n = 1;
-  double kappa = 0;
+  double n = pN;
+  double kappa = pKappa;
 
   double hmc_dt = pHmcDt;
   int hmc_num_steps = pHmcNumSteps;
   int hmc_num_conf = pHmcNumConf;
+  int hmc_num_conf_step = pHmcNumConfStep;
 
   int hmc_num_accepted = 0;
+  int hmc_num_saved = 0;
   double hmc_accept_rate = 0;
-  double hmc_avg_dh = 0;
-  double hmc_avg_exp_dh = 0;
 
   VECTOR<double> action_history;
   VECTOR<double> dh_history;
@@ -253,10 +253,10 @@ int main(int argc, char **argv)
   dh_history.reserve(hmc_num_conf);
   exp_dh_history.reserve(hmc_num_conf);
 
-  tStartConfigurationType start_type = START_CONFIGURATION_RANDOM;
+  const std::string fname_load_conf = pFnameStartConf;
+  tStartConfigurationType start_type = pStartType;
 
   const std::string fname_hmc_stat = "hmc_stat.txt";
-  const std::string fname_load_conf = "init.conf";
 
   tPhysicalParams params;
   params.lambdaN = lambdaN;
@@ -296,6 +296,7 @@ int main(int argc, char **argv)
   }
 
   pStdLogs.Write("\n\nHMC BEGIN\n\n");
+  pStdLogs.Write("Norm of start configuration: %2.15le\n", phi_field_0.Norm());
 
   for(int conf_idx = 0; conf_idx < hmc_num_conf; conf_idx++)
   {
@@ -349,9 +350,15 @@ int main(int argc, char **argv)
 
       hmc_accept_rate += 1.0 / hmc_num_conf;
 
-      action_history.push_back(conf_action / vol);
-      dh_history.push_back(hmc_dh);
-      exp_dh_history.push_back(exp(-hmc_dh));
+      // Measurements
+      if ((hmc_num_accepted + 1) % hmc_num_conf_step == 0)
+      {
+        action_history.push_back(conf_action / vol);
+        dh_history.push_back(hmc_dh);
+        exp_dh_history.push_back(exp(-hmc_dh));
+
+        hmc_num_saved++;
+      }
 
       hmc_num_accepted++;
 
@@ -379,7 +386,7 @@ int main(int argc, char **argv)
 
   FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
 
-  for(int i = 0; i < hmc_num_accepted; i++)
+  for(int i = 0; i < hmc_num_saved; i++)
     SAFE_FPRINTF(f_hmc_stat, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], exp_dh_history[i], dh_history[i]);
 
   fclose(f_hmc_stat);
