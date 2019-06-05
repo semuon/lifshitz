@@ -68,6 +68,33 @@ double main_VectorSigma(const VECTOR<double> &vec)
   return sqrt(sigma);
 }
 
+void main_LoadLastConf(FILE *f, RealScalarFieldN &field)
+{
+  off_t file_size = Utils::GetFileSize(f);
+  off_t conf_size = sizeof(double) * field.Count();
+
+  off_t num_confs = file_size / conf_size;
+  off_t remaining = file_size % conf_size;
+
+  if (remaining != 0)
+  {
+    THROW_EXCEPTION(FileFailure, "Configuration file contains unknown extra data");
+    //TERMINATE("Please check configuration file:\nsize = %lld\nconf. size = %lld\nnum. of confs = %lld\nremaining data = %lld\n",
+    //  file_size, conf_size, num_confs, remaining);
+  }
+
+  if (num_confs == 0)
+  {
+    THROW_EXCEPTION(FileFailure, "Configuration file does not contain any data");
+    //TERMINATE("Configuration file does not contain any data\n");
+  }
+
+  off_t conf_begin = conf_size * (num_confs - 1);
+
+  SAFE_FSEEK(f, conf_begin, SEEK_SET);
+  SAFE_FREAD(field.DataPtr(), sizeof(double), field.Count(), f);
+}
+
 double main_Action(const tPhysicalParams &params, const RealScalarFieldN &phi)
 {
   pGlobalProfiler.StartTimer("Action");
@@ -230,6 +257,7 @@ void main_HMCevolve(const tPhysicalParams &params, const double dt, const int nu
 int main(int argc, char **argv)
 {
   const string f_bin_write_attr = "wb";
+  const string f_bin_append_attr = "ab";
   const string f_bin_read_attr = "rb";
   const string f_txt_write_attr = "w";
   const string f_txt_read_attr = "r";
@@ -296,6 +324,12 @@ int main(int argc, char **argv)
   tStartConfigurationType start_type = pStartType;
 
   const std::string fname_hmc_stat = "hmc_stat.txt";
+  const std::string fname_simple_observables = "simple_observables.txt";
+  const std::string fname_confs = "confs.bin";
+
+  FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
+  FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_write_attr);
+  FILE *f_simple_observables = pDataDir.OpenFile(fname_simple_observables, f_txt_write_attr);
 
   RealScalarFieldN pi_field(lat, n);
   RealScalarFieldN phi_field_0(lat, n);
@@ -313,7 +347,8 @@ int main(int argc, char **argv)
     case START_CONFIGURATION_LOAD:
     {
       FILE *f_load_conf = pDataDir.OpenFile(fname_load_conf, f_bin_read_attr);
-      SAFE_FREAD(phi_field_0.DataPtr(), sizeof(double), vol * n, f_load_conf);
+      main_LoadLastConf(f_load_conf, phi_field_0);
+      //SAFE_FREAD(phi_field_0.DataPtr(), sizeof(double), vol * n, f_load_conf);
       fclose(f_load_conf);
     }
     break;
@@ -327,6 +362,9 @@ int main(int argc, char **argv)
   }
 
   pStdLogs.Write("\n\nHMC BEGIN\n\n");
+
+  double start_action = main_Action(params, phi_field_0) / (double)vol;
+  pStdLogs.Write("Action on start configuration: %2.15le\n", start_action);
   pStdLogs.Write("Norm of start configuration: %2.15le\n\n", phi_field_0.Norm());
 
   for(int conf_idx = 0; conf_idx < hmc_num_conf; conf_idx++)
@@ -392,6 +430,9 @@ int main(int argc, char **argv)
         dh_history.push_back(hmc_dh);
         exp_dh_history.push_back(exp(-hmc_dh));
 
+        // Save configuration
+        Formats::DumpBinary(f_confs, phi_field_0);
+
         hmc_num_saved++;
       }
 
@@ -418,12 +459,12 @@ int main(int argc, char **argv)
   pStdLogs.Write("<exp(dh)> = %2.15le +/- %2.15le\n", main_VectorMean(exp_dh_history), main_VectorSigma(exp_dh_history));
   pStdLogs.Write("<dh> = %2.15le +/- %2.15le\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
 
-  FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
-
   for(int i = 0; i < hmc_num_saved; i++)
     SAFE_FPRINTF(f_hmc_stat, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], exp_dh_history[i], dh_history[i]);
 
   fclose(f_hmc_stat);
+  fclose(f_confs);
+  fclose(f_simple_observables);
 
   int64_t end = Utils::GetTimeMs64();
 
