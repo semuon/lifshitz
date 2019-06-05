@@ -69,6 +69,9 @@ string DataDir::GetFullPath(const string &name) const
 {
   const string c_dot(".");
 
+  if (Utils::IsAbsolutePath(name))
+    return name;
+
   string fname = (pref.empty()) ? name : pref + c_dot + name;
   fname = (suff.empty()) ? fname : fname + c_dot + suff;
   string fpath = Utils::GetAbsFileName(dir, fname);
