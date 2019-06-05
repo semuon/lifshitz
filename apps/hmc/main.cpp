@@ -348,7 +348,6 @@ int main(int argc, char **argv)
     {
       FILE *f_load_conf = pDataDir.OpenFile(fname_load_conf, f_bin_read_attr);
       main_LoadLastConf(f_load_conf, phi_field_0);
-      //SAFE_FREAD(phi_field_0.DataPtr(), sizeof(double), vol * n, f_load_conf);
       fclose(f_load_conf);
     }
     break;
