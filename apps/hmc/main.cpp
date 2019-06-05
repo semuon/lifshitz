@@ -24,6 +24,23 @@ typedef struct PhysicalParams_struct
   double kappa;
 } tPhysicalParams;
 
+typedef struct LatticeParams_struct
+{
+  double k1;
+  double k2;
+  double lambda;
+  double kappa;
+} tLatticeParams;
+
+void main_ConvertCouplings(const tLatticeParams &lattice_params, const int ndim, tPhysicalParams &phys_params)
+{
+  phys_params.invM2 = 2.0 * lattice_params.k2;
+  phys_params.Z = 2.0 * lattice_params.k1 - 8.0 * lattice_params.k2;
+  phys_params.m2 = 2.0 + 4.0 * ndim * lattice_params.k2 - 4.0 * ndim * lattice_params.k1 - 4.0 * lattice_params.lambda;
+  phys_params.lambdaN = 4.0 * phys_params.N * lattice_params.lambda;
+  phys_params.kappa = 6.0 * lattice_params.kappa;
+}
+
 double main_VectorMean(const VECTOR<double> &vec)
 {
   double mean = 0;
@@ -229,12 +246,34 @@ int main(int argc, char **argv)
   Lattice lat(latdims, ndim, nc, nd);
   uint vol = lat.Volume();
 
-  double invM2 = pInvM2;
-  double m2 = pm2;
-  double Z = pZ;
-  double lambdaN = pLambdaN;
-  double n = pN;
-  double kappa = pKappa;
+  int n = pN;
+
+  tPhysicalParams params;
+  params.lambdaN = pLambdaN;
+  params.invM2 = pInvM2;
+  params.m2 = pm2;
+  params.Z = pZ;
+  params.N = pN;
+  params.kappa = pKappa;
+
+  if (pIsLatticeParamsSet)
+  {
+    tLatticeParams lattice_params;
+    lattice_params.k1 = pLatK1;
+    lattice_params.k2 = pLatK2;
+    lattice_params.lambda = pLatLambda;
+    lattice_params.kappa = pLatKappa;
+
+    main_ConvertCouplings(lattice_params, ndim, params);
+
+    pStdLogs.Write("\nEffective couplings are:\n");
+    pStdLogs.Write("  kappa:                                       %2.4le\n", params.kappa);
+    pStdLogs.Write("  m^2:                                         %2.4le\n", params.m2);
+    pStdLogs.Write("  lambda*N:                                    %2.4le\n", params.lambdaN);
+    pStdLogs.Write("  m^2:                                         %2.4le\n", params.m2);
+    pStdLogs.Write("  1/M^2:                                       %2.4le\n", params.invM2);
+    pStdLogs.Write("  Z:                                           %2.4le\n\n", params.Z);
+  }
 
   double hmc_dt = pHmcDt;
   int hmc_num_steps = pHmcNumSteps;
@@ -257,14 +296,6 @@ int main(int argc, char **argv)
   tStartConfigurationType start_type = pStartType;
 
   const std::string fname_hmc_stat = "hmc_stat.txt";
-
-  tPhysicalParams params;
-  params.lambdaN = lambdaN;
-  params.invM2 = invM2;
-  params.m2 = m2;
-  params.Z = Z;
-  params.N = n;
-  params.kappa = kappa;
 
   RealScalarFieldN pi_field(lat, n);
   RealScalarFieldN phi_field_0(lat, n);
@@ -296,7 +327,7 @@ int main(int argc, char **argv)
   }
 
   pStdLogs.Write("\n\nHMC BEGIN\n\n");
-  pStdLogs.Write("Norm of start configuration: %2.15le\n", phi_field_0.Norm());
+  pStdLogs.Write("Norm of start configuration: %2.15le\n\n", phi_field_0.Norm());
 
   for(int conf_idx = 0; conf_idx < hmc_num_conf; conf_idx++)
   {
@@ -346,6 +377,8 @@ int main(int argc, char **argv)
 
     if(accepted)
     {
+      pStdLogs.Write("status: ACCEPTED\n");
+
       phi_field_0 = phi_field_1;
 
       hmc_accept_rate += 1.0 / hmc_num_conf;
@@ -353,6 +386,8 @@ int main(int argc, char **argv)
       // Measurements
       if ((hmc_num_accepted + 1) % hmc_num_conf_step == 0)
       {
+        pStdLogs.Write("MEASUREMENTS\n");
+
         action_history.push_back(conf_action / vol);
         dh_history.push_back(hmc_dh);
         exp_dh_history.push_back(exp(-hmc_dh));
@@ -362,8 +397,7 @@ int main(int argc, char **argv)
 
       hmc_num_accepted++;
 
-      pStdLogs.Write("status: ACCEPTED\n");
-      pStdLogs.Write("action = %2.15le\n", conf_action);
+      pStdLogs.Write("action = %2.15le\n", conf_action / vol);
     }
     else
     {

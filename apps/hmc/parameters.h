@@ -13,6 +13,13 @@ typedef enum EnumStartConfigurationType
 extern int pN;
 extern double pKappa;
 
+extern double pLatK1;
+extern double pLatK2;
+extern double pLatLambda;
+extern double pLatKappa;
+
+extern bool pIsLatticeParamsSet;
+
 extern tStartConfigurationType pStartType;
 extern std::string pFnameStartConf;
 
