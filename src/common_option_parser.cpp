@@ -130,9 +130,9 @@ common_option_parser_PrintParameters(int argc, char **argv)
   pStdLogs.Write("Data output directory:                         %s\n", pDataDir.GetDirectory().c_str());
 
   if (pSetSeed)
-    pStdLogs.Write("Seed for ranlxd:                               %d\n", pSeed);
+    pStdLogs.Write("Seed for ranlxd:                              % -d\n", pSeed);
   else
-    pStdLogs.Write("Seed for ranlxd (automatic):                   %d\n", pSeed);
+    pStdLogs.Write("Seed for ranlxd (automatic):                  % -d\n", pSeed);
 
   pStdLogs.Write("\n");
   pStdLogs.Write("Run parameters:\n");
@@ -142,12 +142,12 @@ common_option_parser_PrintParameters(int argc, char **argv)
     pStdLogs.Write("%-3d x   ", pL[dir]);
   pStdLogs.Write("%-3d\n", pL[pDim - 1]);
 
-  pStdLogs.Write("  Dim:                                         %d\n", pDim);
+  pStdLogs.Write("  Dim:                                        % -d\n", pDim);
 
-  pStdLogs.Write("  lambda*N:                                    %2.4le\n", pLambdaN);
-  pStdLogs.Write("  m^2:                                         %2.4le\n", pm2);
-  pStdLogs.Write("  1/M^2:                                       %2.4le\n", pInvM2);
-  pStdLogs.Write("  Z:                                           %2.4le\n", pZ);
+  pStdLogs.Write("  lambda*N:                                   % -2.4le\n", pLambdaN);
+  pStdLogs.Write("  m^2:                                        % -2.4le\n", pm2);
+  pStdLogs.Write("  1/M^2:                                      % -2.4le\n", pInvM2);
+  pStdLogs.Write("  Z:                                          % -2.4le\n", pZ);
   
   option_parser_PrintParameters();
 }

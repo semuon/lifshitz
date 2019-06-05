@@ -267,12 +267,12 @@ int main(int argc, char **argv)
     main_ConvertCouplings(lattice_params, ndim, params);
 
     pStdLogs.Write("\nEffective couplings are:\n");
-    pStdLogs.Write("  kappa:                                       %2.4le\n", params.kappa);
-    pStdLogs.Write("  m^2:                                         %2.4le\n", params.m2);
-    pStdLogs.Write("  lambda*N:                                    %2.4le\n", params.lambdaN);
-    pStdLogs.Write("  m^2:                                         %2.4le\n", params.m2);
-    pStdLogs.Write("  1/M^2:                                       %2.4le\n", params.invM2);
-    pStdLogs.Write("  Z:                                           %2.4le\n\n", params.Z);
+    pStdLogs.Write("  kappa:                                      % -2.15le\n", params.kappa);
+    pStdLogs.Write("  m^2:                                        % -2.15le\n", params.m2);
+    pStdLogs.Write("  lambda*N:                                   % -2.15le\n", params.lambdaN);
+    pStdLogs.Write("  m^2:                                        % -2.15le\n", params.m2);
+    pStdLogs.Write("  1/M^2:                                      % -2.15le\n", params.invM2);
+    pStdLogs.Write("  Z:                                          % -2.15le\n\n", params.Z);
   }
 
   double hmc_dt = pHmcDt;

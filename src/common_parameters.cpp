@@ -6,7 +6,7 @@ VECTOR<uint> pL(pDim, 1);
 
 double pLambdaN = 1.0;
 double pInvM2 = 0.0;
-double pm2 = 1.0;
+double pm2 = 0.0;
 double pZ = 1.0;
 
 std::string pLogsDirPath;

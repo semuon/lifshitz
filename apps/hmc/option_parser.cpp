@@ -96,16 +96,16 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
 void option_parser_PrintParameters()
 {
-  pStdLogs.Write("  kappa:                                       %2.4le\n", pKappa);
-  pStdLogs.Write("  N:                                           %d\n", pN);
+  pStdLogs.Write("  kappa:                                      % -2.4le\n", pKappa);
+  pStdLogs.Write("  N:                                          % -d\n", pN);
 
   if (pIsLatticeParamsSet)
   {
     pStdLogs.Write("\nLattice couplings are set. The above couplings will be discarded.\n");
-    pStdLogs.Write("  k1:                                          %2.4le\n", pLatK1);
-    pStdLogs.Write("  k2:                                          %2.4le\n", pLatK2);
-    pStdLogs.Write("  lambda:                                      %2.4le\n", pLatLambda);
-    pStdLogs.Write("  kappa:                                       %2.4le\n", pLatKappa);
+    pStdLogs.Write("  k1:                                         % -2.4le\n", pLatK1);
+    pStdLogs.Write("  k2:                                         % -2.4le\n", pLatK2);
+    pStdLogs.Write("  lambda:                                     % -2.4le\n", pLatLambda);
+    pStdLogs.Write("  kappa:                                      % -2.4le\n", pLatKappa);
   }
 
   pStdLogs.Write("\nParameters of HMC:\n");
@@ -119,10 +119,10 @@ void option_parser_PrintParameters()
     default:                              pStdLogs.Write("UNKNOWN\n"); break;;
   }
 
-  pStdLogs.Write("  Integrator time step:                        %2.4le\n", pHmcDt);
-  pStdLogs.Write("  Number of integration steps:                 %d\n", pHmcNumSteps);
-  pStdLogs.Write("  Number of configurations:                    %d\n", pHmcNumConf);
-  pStdLogs.Write("  Save configuration on each step:             %d\n", pHmcNumConfStep);
+  pStdLogs.Write("  Integrator time step:                       % -2.4le\n", pHmcDt);
+  pStdLogs.Write("  Number of integration steps:                % -d\n", pHmcNumSteps);
+  pStdLogs.Write("  Number of configurations:                   % -d\n", pHmcNumConf);
+  pStdLogs.Write("  Save configuration on each step:            % -d\n", pHmcNumConfStep);
 
   pStdLogs.Write("\n");
 }
