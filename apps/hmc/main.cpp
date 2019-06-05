@@ -315,21 +315,29 @@ int main(int argc, char **argv)
   VECTOR<double> action_history;
   VECTOR<double> dh_history;
   VECTOR<double> exp_dh_history;
+  VECTOR<double> magnetization_abs;
+  VECTOR<double> magnetization_pwr_2;
+
+  VECTOR<double> magnetization_i(n);
 
   action_history.reserve(hmc_num_conf);
   dh_history.reserve(hmc_num_conf);
   exp_dh_history.reserve(hmc_num_conf);
+  magnetization_abs.reserve(hmc_num_conf);
+  magnetization_pwr_2.reserve(hmc_num_conf);
 
   const std::string fname_load_conf = pFnameStartConf;
   tStartConfigurationType start_type = pStartType;
 
   const std::string fname_hmc_stat = "hmc_stat.txt";
   const std::string fname_simple_observables = "simple_observables.txt";
+  const std::string fname_magnetization = "magnetization.bin";
   const std::string fname_confs = "confs.bin";
 
   FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_write_attr);
   FILE *f_simple_observables = pDataDir.OpenFile(fname_simple_observables, f_txt_write_attr);
+  FILE *f_magnetization = pDataDir.OpenFile(fname_magnetization, f_bin_write_attr);
 
   RealScalarFieldN pi_field(lat, n);
   RealScalarFieldN phi_field_0(lat, n);
@@ -425,6 +433,25 @@ int main(int argc, char **argv)
       {
         pStdLogs.Write("MEASUREMENTS\n");
 
+        // Condensate
+        double m_pwr_2 = 0;
+        double m_abs = 0;
+
+        for(int i = 0; i < n; i++)
+        {
+          double cond = 0;
+
+          for(uint x = 0; x < vol; x++)
+            cond += phi_field_0(x, i);
+
+          magnetization_i[i] = cond;
+          m_pwr_2 += cond * cond;
+          m_abs += fabs(cond);
+        }
+
+        Formats::DumpBinary(f_magnetization, magnetization_i);
+        magnetization_abs.push_back(m_abs);
+        magnetization_pwr_2.push_back(m_pwr_2);
         action_history.push_back(conf_action / vol);
         dh_history.push_back(hmc_dh);
         exp_dh_history.push_back(exp(-hmc_dh));
@@ -459,11 +486,15 @@ int main(int argc, char **argv)
   pStdLogs.Write("<dh> = %2.15le +/- %2.15le\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
 
   for(int i = 0; i < hmc_num_saved; i++)
+  {
     SAFE_FPRINTF(f_hmc_stat, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], exp_dh_history[i], dh_history[i]);
+    SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], magnetization_abs[i], magnetization_pwr_2[i]);
+  }
 
   fclose(f_hmc_stat);
   fclose(f_confs);
   fclose(f_simple_observables);
+  fclose(f_magnetization);
 
   int64_t end = Utils::GetTimeMs64();
 
