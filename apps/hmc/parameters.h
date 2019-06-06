@@ -10,6 +10,12 @@ typedef enum EnumStartConfigurationType
   START_CONFIGURATION_LOAD = 2
 }tStartConfigurationType;
 
+typedef enum EnumIntegratorType
+{
+  INTEGRATOR_LEAPFROG = 0,
+  INTEGRATOR_OMELYAN = 1
+}tIntegratorType;
+
 extern int pN;
 extern double pKappa;
 
@@ -21,6 +27,7 @@ extern double pLatKappa;
 extern bool pIsLatticeParamsSet;
 
 extern tStartConfigurationType pStartType;
+extern tIntegratorType pIntegratorType;
 extern std::string pFnameStartConf;
 
 extern int pHmcNumSteps;

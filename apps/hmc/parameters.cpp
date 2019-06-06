@@ -10,6 +10,8 @@ double pLatKappa = 0.0;
 
 bool pIsLatticeParamsSet = false;
 
+tIntegratorType pIntegratorType = INTEGRATOR_LEAPFROG;
+
 tStartConfigurationType pStartType = START_CONFIGURATION_RANDOM;
 std::string pFnameStartConf = "init.conf";
 

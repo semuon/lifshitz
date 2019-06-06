@@ -41,6 +41,42 @@ std::istream& operator>>(std::istream& is, StartTypeParser &val)
   return is;
 }
 
+// Auxiliary structures for --integrator option
+struct IntegratorTypeParser
+{
+  typedef TCLAP::ValueLike ValueCategory;
+  tIntegratorType type;
+
+  IntegratorTypeParser() : type(INTEGRATOR_LEAPFROG) {}
+  IntegratorTypeParser(const tIntegratorType &val) : type(val) {}
+
+  bool operator==(const IntegratorTypeParser &other) const { return (type == other.type); }
+};
+
+std::ostream& operator<<(std::ostream& os, const IntegratorTypeParser &val)
+{
+  switch (val.type)
+  {
+    case INTEGRATOR_LEAPFROG:       os << "leapfrog"; break;
+    case INTEGRATOR_OMELYAN:        os << "omelyan"; break;
+    default:                             os.setstate(std::ios::failbit);
+  }
+
+  return os;
+}
+
+std::istream& operator>>(std::istream& is, IntegratorTypeParser &val)
+{
+  std::string arg;
+  std::getline(is, arg);
+
+  if      (arg == "leapfrog")               val.type = INTEGRATOR_LEAPFROG;
+  else if (arg == "omelyan")                val.type = INTEGRATOR_OMELYAN;
+  else                                      is.setstate(std::ios::failbit);
+
+  return is;
+}
+
 static void option_parser_CheckParameters()
 {
 }
@@ -60,7 +96,14 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   allowed_start_types.push_back(START_CONFIGURATION_ZERO);
   allowed_start_types.push_back(START_CONFIGURATION_RANDOM);
   TCLAP::ValuesConstraint<StartTypeParser> allowedVals( allowed_start_types );
-  TCLAP::ValueArg<StartTypeParser> argStartType("", "start-type", "Type of start configuration: <zero|random>", false, default_start_type, &allowedVals, cmd);
+  TCLAP::ValueArg<StartTypeParser> argStartType("", "start-type", "Type of start configuration", false, default_start_type, &allowedVals, cmd);
+
+  IntegratorTypeParser default_integrator_type;
+  std::vector<IntegratorTypeParser> allowed_integrator_types;
+  allowed_integrator_types.push_back(INTEGRATOR_LEAPFROG);
+  allowed_integrator_types.push_back(INTEGRATOR_OMELYAN);
+  TCLAP::ValuesConstraint<IntegratorTypeParser> allowedIntegratorVals( allowed_integrator_types );
+  TCLAP::ValueArg<IntegratorTypeParser> argIntegratorType("", "integrator", "Type of HMC integrator", false, default_integrator_type, &allowedIntegratorVals, cmd);
 
   ArgProvidedVisitor argFnameConfVisitor;
   TCLAP::ValueArg<std::string> argFnameConf("", "start-conf", "File name of start configuration. Overloads --start-type option if provided.", false, pFnameStartConf, "file name", cmd, &argFnameConfVisitor);
@@ -91,6 +134,8 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
   pIsLatticeParamsSet = argLatCouplingsVisitor.IsFlagSet();
 
+  pIntegratorType = argIntegratorType.getValue().type;
+
   option_parser_CheckParameters();
 }
 
@@ -116,6 +161,14 @@ void option_parser_PrintParameters()
     case START_CONFIGURATION_ZERO:        pStdLogs.Write("zero\n"); break;
     case START_CONFIGURATION_RANDOM:      pStdLogs.Write("random\n"); break;
     case START_CONFIGURATION_LOAD:        std::cout << pFnameStartConf << std::endl; break;
+    default:                              pStdLogs.Write("UNKNOWN\n"); break;;
+  }
+
+  pStdLogs.Write("  Integrator:                                  ");
+  switch (pIntegratorType)
+  {
+    case INTEGRATOR_LEAPFROG:             pStdLogs.Write("leapfrog\n"); break;
+    case INTEGRATOR_OMELYAN:              pStdLogs.Write("omelyan\n"); break;
     default:                              pStdLogs.Write("UNKNOWN\n"); break;;
   }
 

@@ -209,10 +209,28 @@ void main_HMCforce(const tPhysicalParams &params, const RealScalarFieldN &phi, R
   pGlobalProfiler.StopTimer("HMC Force");
 }
 
-void main_HMCevolve(const tPhysicalParams &params, const double dt, const int num_steps,
-                    RealScalarFieldN &phi, RealScalarFieldN &pi)
+void main_HMCUpdatePhi(const tPhysicalParams &params, const double dt,
+                       RealScalarFieldN &phi, const RealScalarFieldN &pi)
 {
-  pGlobalProfiler.StartTimer("HMC Trajectory");
+  for(uint i = 0; i < phi.Count(); i++)
+    phi[i] += pi[i] * dt;
+}
+
+void main_HMCUpdatePi(const tPhysicalParams &params, const double dt,
+                      const RealScalarFieldN &phi, RealScalarFieldN &pi, RealScalarFieldN &force)
+{
+  main_HMCforce(params, phi, force);
+
+  for(uint i = 0; i < phi.Count(); i++)
+    pi[i] -= force[i] * dt;
+}
+
+void main_HMCOmelyan(const tPhysicalParams &params, const double dt, const int num_steps,
+                     RealScalarFieldN &phi, RealScalarFieldN &pi)
+{
+  const double xi = 0.1931833;
+
+  pGlobalProfiler.StartTimer("HMC Omelyan");
 
   double n = params.N;
 
@@ -222,36 +240,59 @@ void main_HMCevolve(const tPhysicalParams &params, const double dt, const int nu
 
   const Lattice &lat = phi.GetLattice();
 
-  uint vol = lat.Volume();
+  RealScalarFieldN force(lat, n);
+
+  // First step
+  main_HMCUpdatePhi(params, dt * xi, phi, pi);
+  main_HMCUpdatePi(params, dt * 0.5, phi, pi, force);
+  main_HMCUpdatePhi(params, dt * (1 - 2.0 * xi), phi, pi);
+  main_HMCUpdatePi(params, dt * 0.5, phi, pi, force);
+
+  // Intermediate steps
+  for(int step_idx = 0; step_idx < num_steps - 1; step_idx++)
+  {
+    main_HMCUpdatePhi(params, dt * 2.0 * xi, phi, pi);
+    main_HMCUpdatePi(params, dt * 0.5, phi, pi, force);
+    main_HMCUpdatePhi(params, dt * (1 - 2.0 * xi), phi, pi);
+    main_HMCUpdatePi(params, dt * 0.5, phi, pi, force);
+  }
+
+  // Last step
+  main_HMCUpdatePhi(params, dt * xi, phi, pi);
+
+  pGlobalProfiler.StopTimer("HMC Omelyan");
+}
+
+void main_HMCLeapfrog(const tPhysicalParams &params, const double dt, const int num_steps,
+                      RealScalarFieldN &phi, RealScalarFieldN &pi)
+{
+  pGlobalProfiler.StartTimer("HMC Leapfrog");
+
+  double n = params.N;
+
+  ASSERT(n == phi.N());
+  ASSERT(n == pi.N());
+  ASSERT(phi.GetLattice() == pi.GetLattice());
+
+  const Lattice &lat = phi.GetLattice();
 
   RealScalarFieldN force(lat, n);
 
   // First step of leapfrog
-  for(uint i = 0; i < n * vol; i++)
-    phi[i] += pi[i] * dt / 2.0;
-
-  main_HMCforce(params, phi, force);
-
-  for(uint i = 0; i < n * vol; i++)
-    pi[i] -= force[i] * dt;
+  main_HMCUpdatePhi(params, dt / 2.0, phi, pi);
+  main_HMCUpdatePi(params, dt, phi, pi, force);
 
   // Intermediate steps of leapfrog
   for(int step_idx = 0; step_idx < num_steps - 1; step_idx++)
   {
-    for(uint i = 0; i < n * vol; i++)
-      phi[i] += pi[i] * dt;
-
-    main_HMCforce(params, phi, force);
-
-    for(uint i = 0; i < n * vol; i++)
-      pi[i] -= force[i] * dt;
+    main_HMCUpdatePhi(params, dt, phi, pi);
+    main_HMCUpdatePi(params, dt, phi, pi, force);
   }
 
   // Last step of leapfrog
-  for(uint i = 0; i < n * vol; i++)
-    phi[i] += pi[i] * dt / 2.0;
+  main_HMCUpdatePhi(params, dt / 2.0, phi, pi);
 
-  pGlobalProfiler.StopTimer("HMC Trajectory");
+  pGlobalProfiler.StopTimer("HMC Leapfrog");
 }
 
 int main(int argc, char **argv)
@@ -329,6 +370,8 @@ int main(int argc, char **argv)
   const std::string fname_load_conf = pFnameStartConf;
   tStartConfigurationType start_type = pStartType;
 
+  tIntegratorType integrator_type = pIntegratorType;
+
   const std::string fname_hmc_stat = "hmc_stat.txt";
   const std::string fname_simple_observables = "simple_observables.txt";
   const std::string fname_magnetization = "magnetization.bin";
@@ -394,7 +437,16 @@ int main(int argc, char **argv)
 
     h0 += main_Action(params, phi_field_1);
 
-    main_HMCevolve(params, hmc_dt, hmc_num_steps, phi_field_1, pi_field);
+    switch(integrator_type)
+    {
+      case INTEGRATOR_OMELYAN:
+        main_HMCOmelyan(params, hmc_dt, hmc_num_steps, phi_field_1, pi_field);
+      break;
+      case INTEGRATOR_LEAPFROG:
+      default:
+        main_HMCLeapfrog(params, hmc_dt, hmc_num_steps, phi_field_1, pi_field);
+      break;
+    }
 
     for(uint i = 0; i < n * vol; i++)
       h1 += pi_field[i] * pi_field[i] / 2.0;
