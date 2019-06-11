@@ -32,6 +32,8 @@ public:
 
   static double Action(const tScalarModelParams &params, const RealScalarFieldN &phi);
   static void HMCforce(const tScalarModelParams &params, const RealScalarFieldN &phi, RealScalarFieldN &force);
+
+  static void CorrelationFunction(const RealScalarFieldN &phi, const bool vol_avg, VECTOR<double> &corr);
 };
 
 #endif

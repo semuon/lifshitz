@@ -24,6 +24,9 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   TCLAP::ValueArg<double> argLatLambda("", "lat-lambda", "Dimensionless quartic coupling. This will be converted into standard couplings.", false, pLatLambda, "n", cmd, &argLatCouplingsVisitor);
   TCLAP::ValueArg<double> argLatKappa("", "lat-kappa", "Dimensionless sextic coupling. This will be converted into standard couplings.", false, pLatKappa, "n", cmd, &argLatCouplingsVisitor);
 
+  TCLAP::SwitchArg switchIsComputeCorr("", "compute-corr", "Compute correlation function", cmd, false);
+  TCLAP::SwitchArg switchIsVolAvgCorr("", "vol-avg-corr", "Average correlation function over volume", cmd, false);
+
   cmd.parse(argc, argv);
 
   pN = argN.getValue();
@@ -41,6 +44,9 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   pLatKappa = argLatKappa.getValue();
 
   pIsLatticeParamsSet = argLatCouplingsVisitor.IsFlagSet();
+
+  pIsComputeCorr = switchIsComputeCorr.getValue();
+  pIsVolAvgCorr = switchIsVolAvgCorr.getValue();
 
   option_parser_CheckParameters();
 }
@@ -67,6 +73,12 @@ void option_parser_PrintParameters()
   pStdLogs.Write("  Skip first #confs:                          % -d\n", pNumSkipFirst);
   pStdLogs.Write("  Skip last #confs:                           % -d\n", pNumSkipLast);
   pStdLogs.Write("  Process each #conf:                         % -d\n", pConfStep);
+
+  pStdLogs.Write("\n  Compute correlation function:                %s\n", (pIsComputeCorr) ? "YES" : "NO");
+  if (pIsComputeCorr)
+  {
+    pStdLogs.Write("    Average over volume:                       %s\n", (pIsVolAvgCorr) ? "YES" : "NO");
+  }
 
   pStdLogs.Write("\n");
 }

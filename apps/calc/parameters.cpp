@@ -10,6 +10,9 @@ double pLatKappa = 0.0;
 
 bool pIsLatticeParamsSet = false;
 
+bool pIsComputeCorr = false;
+bool pIsVolAvgCorr = false;
+
 std::string pFnameConfs = "confs.bin";
 
 int pNumSkipFirst = 0;

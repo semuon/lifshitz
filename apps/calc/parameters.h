@@ -26,6 +26,9 @@ extern double pLatKappa;
 
 extern bool pIsLatticeParamsSet;
 
+extern bool pIsComputeCorr;
+extern bool pIsVolAvgCorr;
+
 extern std::string pFnameConfs;
 
 extern int pNumSkipFirst;

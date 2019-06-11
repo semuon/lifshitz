@@ -42,9 +42,8 @@ double main_VectorSigma(const VECTOR<double> &vec)
   return sqrt(sigma);
 }
 
-void main_LoadConfAt(FILE *f, uint conf_idx, RealScalarFieldN &field)
+void main_LoadConfAt(FILE *f, off_t file_size, uint conf_idx, RealScalarFieldN &field)
 {
-  off_t file_size = Utils::GetFileSize(f);
   off_t conf_size = sizeof(double) * field.Count();
 
   off_t num_confs = file_size / conf_size;
@@ -66,9 +65,8 @@ void main_LoadConfAt(FILE *f, uint conf_idx, RealScalarFieldN &field)
   SAFE_FREAD(field.DataPtr(), sizeof(double), field.Count(), f);
 }
 
-int main_GetNumConfsFile(FILE *f, uint filed_size)
+int main_GetNumConfsFile(off_t file_size, uint filed_size)
 {
-  off_t file_size = Utils::GetFileSize(f);
   off_t conf_size = sizeof(double) * filed_size;
 
   off_t num_confs = file_size / conf_size;
@@ -107,6 +105,15 @@ int main(int argc, char **argv)
   Lattice lat(latdims, ndim, nc, nd);
   uint vol = lat.Volume();
 
+  uint corr_ls = latdims[0];
+  for(uint mu = 0; mu < ndim; mu++)
+  {
+    if (latdims[mu] < corr_ls) 
+    {
+      corr_ls = latdims[mu];
+    }
+  }
+
   int n = pN;
 
   tScalarModelParams params;
@@ -140,34 +147,64 @@ int main(int argc, char **argv)
   int num_skip_last = pNumSkipLast;
   int conf_step = pConfStep;
 
+  bool corr_vol_avg = pIsVolAvgCorr;
+
   const std::string fname_confs = pFnameConfs;
 
   const std::string fname_corr = "correlator.bin";
 
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_read_attr);
 
-  FILE *f_corr = pDataDir.OpenFile(fname_corr, f_bin_write_attr);
+  FILE *f_corr = NULL;
+
+  if (pIsComputeCorr)
+    f_corr = pDataDir.OpenFile(fname_corr, f_bin_write_attr);
 
   RealScalarFieldN phi_field(lat, n);
 
-  int num_confs = main_GetNumConfsFile(f_confs, phi_field.Count());
+  VECTOR<double> corr(corr_ls);
 
-  pStdLogs.Write("\nCALC BEGIN\n\n");
+  off_t conf_file_size = Utils::GetFileSize(f_confs);
+  int num_file_confs = main_GetNumConfsFile(conf_file_size, phi_field.Count());
 
-  double start_action = ScalarModel::Action(params, phi_field) / (double)vol;
-  pStdLogs.Write("Action on the first configuration: %2.15le\n", start_action);
-  pStdLogs.Write("Norm of the first configuration: %2.15le\n\n", phi_field.Norm());
+  int num_confs = (num_file_confs - num_skip_first - num_skip_last) / conf_step;
 
-  for(int conf_idx = 0; conf_idx < 1; conf_idx++)
+  if (num_confs <= 0)
   {
+    pStdLogs.Write("\nNOTHING TO DO\n\n");
+  }
+  else
+  {
+    pStdLogs.Write("\nCALC BEGIN\n\n");
+
+    pStdLogs.Write("\nNumber of confs in the file: %d\n", num_file_confs);
+    pStdLogs.Write("Number of confs to process: %d\n", num_confs);
+    pStdLogs.Write("Correlator max. distance: %d\n\n", corr_ls);
+
+    for(int conf_idx = num_skip_first; conf_idx < num_file_confs - num_skip_last; conf_idx += conf_step)
+    {
+      main_LoadConfAt(f_confs, conf_file_size, conf_idx, phi_field);
+
+      pStdLogs.Write("\nConf. id = %d\n", conf_idx + 1);
+      pStdLogs.Write("ACTION = %2.15le\n", ScalarModel::Action(params, phi_field)/(double)vol);
+
+      if (pIsComputeCorr)
+      {
+        ScalarModel::CorrelationFunction(phi_field, corr_vol_avg, corr);
+
+        Formats::DumpBinary(f_corr, corr);
+      }
+    }
+
+    pGlobalProfiler.PrintStatistics();
+
+    pStdLogs.Write("\nCALC COMPLETED\n\n");
   }
 
-  pGlobalProfiler.PrintStatistics();
-
-  pStdLogs.Write("\nCALC COMPLETED\n\n");
-
-  fclose(f_corr);
   fclose(f_confs);
+
+  if (pIsComputeCorr)
+    fclose(f_corr);
 
   int64_t end = Utils::GetTimeMs64();
 

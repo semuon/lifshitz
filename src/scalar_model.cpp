@@ -10,6 +10,40 @@ void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_para
   phys_params.kappa = 6.0 * lattice_params.kappa;
 }
 
+void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vol_avg, VECTOR<double> &corr)
+{
+  const Lattice &lat = phi.GetLattice();
+  const uint ls = corr.size();
+
+  uint ndim = lat.Dim();
+  uint vol = lat.Volume();
+  uint n = phi.N();
+
+  for(uint mu = 0; mu < ndim; mu++)
+    ASSERT(lat.LatticeSize(mu) >= ls);
+
+  for(uint i = 0; i < ls; i++)
+    corr[i] = 0;
+
+  uint xmax = (vol_avg) ? vol : 1;
+
+  for(uint x = 0; x < xmax; x++)
+  for(uint mu = 0; mu < ndim; mu++)
+  {
+    uint x1 = x;
+
+    for(uint s = 0; s < ls; s++)
+    {
+      for(uint i = 0; i < n; i++)
+      {
+        corr[s] += phi(x, i) * phi(x1, i) / (n * xmax * ndim);
+      }
+
+      x1 = lat.SiteIndexForward(x1, mu);
+    }
+  }
+}
+
 double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFieldN &phi)
 {
   pGlobalProfiler.StartTimer("Action");
