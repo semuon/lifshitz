@@ -4,6 +4,7 @@
 #include "parameters.h"
 #include "scalar_field_n.h"
 #include "lattice.h"
+#include "scalar_model.h"
 #include "formats.h"
 #include "linalg.h"
 #include <time.h>
@@ -13,33 +14,6 @@
 using std::cout;
 using std::endl;
 using std::string;
-
-typedef struct PhysicalParams_struct
-{
-  double m2;
-  double invM2;
-  double Z;
-  double lambdaN;
-  double N;
-  double kappa;
-} tPhysicalParams;
-
-typedef struct LatticeParams_struct
-{
-  double k1;
-  double k2;
-  double lambda;
-  double kappa;
-} tLatticeParams;
-
-void main_ConvertCouplings(const tLatticeParams &lattice_params, const int ndim, tPhysicalParams &phys_params)
-{
-  phys_params.invM2 = 2.0 * lattice_params.k2;
-  phys_params.Z = 2.0 * lattice_params.k1 - 8.0 * lattice_params.k2;
-  phys_params.m2 = 2.0 + 4.0 * ndim * lattice_params.k2 - 4.0 * ndim * lattice_params.k1 - 4.0 * lattice_params.lambda;
-  phys_params.lambdaN = 4.0 * phys_params.N * lattice_params.lambda;
-  phys_params.kappa = 6.0 * lattice_params.kappa;
-}
 
 double main_VectorMean(const VECTOR<double> &vec)
 {
@@ -95,137 +69,23 @@ void main_LoadLastConf(FILE *f, RealScalarFieldN &field)
   SAFE_FREAD(field.DataPtr(), sizeof(double), field.Count(), f);
 }
 
-double main_Action(const tPhysicalParams &params, const RealScalarFieldN &phi)
-{
-  pGlobalProfiler.StartTimer("Action");
-
-  double m2 = params.m2;
-  double invM2 = params.invM2;
-  double Z = params.Z;
-  double lambdaN = params.lambdaN;
-  double n = params.N;
-  double kappa = params.kappa;
-
-  ASSERT(n == phi.N());
-
-  const Lattice &lat = phi.GetLattice();
-
-  int ndim = lat.Dim();
-  uint vol = lat.Volume();
-
-  double res = 0;
-
-  // Kinetic terms
-  for(uint i = 0; i < n; i++)
-  {
-    for(uint x = 0; x < vol; x++)
-    {
-      res += (m2 + 2.0 * ndim * Z + 6.0 * ndim * invM2) * phi(x, i) * phi(x, i) / 2.0;
-
-      for(int mu = 0; mu < ndim; mu++)
-      {
-        uint xmu_fwd = lat.SiteIndexForward(x, mu);
-        uint xmu_bwd = lat.SiteIndexBackward(x, mu);
-        uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
-        uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
-
-        res += phi(x, i) * invM2 * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i)) / 2.0;
-        res += phi(x, i) * (-Z - 4.0 * invM2) * (phi(xmu_fwd, i) + phi(xmu_bwd, i)) / 2.0;
-      }
-    }
-  }
-
-  // Interaction terms
-  for(uint x = 0; x < vol; x++)
-  {
-    double phi2 = 0;
-
-    for(uint i = 0; i < n; i++)
-      phi2 += phi(x, i) * phi(x, i);
-
-    res += lambdaN * phi2 * phi2 / (4.0 * n);
-    res += kappa * phi2 * phi2 * phi2 / 6.0;
-  }
-
-  pGlobalProfiler.StopTimer("Action");
-
-  return res;
-}
-
-void main_HMCforce(const tPhysicalParams &params, const RealScalarFieldN &phi, RealScalarFieldN &force)
-{
-  pGlobalProfiler.StartTimer("HMC Force");
-
-  double m2 = params.m2;
-  double invM2 = params.invM2;
-  double Z = params.Z;
-  double lambdaN = params.lambdaN;
-  double n = params.N;
-  double kappa = params.kappa;
-
-  ASSERT(n == phi.N());
-  ASSERT(n == force.N());
-
-  const Lattice &lat = phi.GetLattice();
-
-  int ndim = lat.Dim();
-  uint vol = lat.Volume();
-
-  // Kinetic terms
-  for(uint i = 0; i < n; i++)
-  {
-    for(uint x = 0; x < vol; x++)
-    {
-      force(x, i) = (m2 + 2.0 * ndim * Z + 6.0 * ndim * invM2) * phi(x, i);
-
-      for(int mu = 0; mu < ndim; mu++)
-      {
-        uint xmu_fwd = lat.SiteIndexForward(x, mu);
-        uint xmu_bwd = lat.SiteIndexBackward(x, mu);
-        uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
-        uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
-
-        force(x, i) += invM2 * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i));
-        force(x, i) += (-Z - 4.0 * invM2) * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
-      }
-    }
-  }
-
-  // Interaction terms
-  for(uint x = 0; x < vol; x++)
-  {
-    double phi2 = 0;
-
-    for(uint i = 0; i < n; i++)
-      phi2 += phi(x, i) * phi(x, i);
-
-    for(uint i = 0; i < n; i++)
-    {
-      force(x, i) += lambdaN * phi2 * phi(x, i) / n;
-      force(x, i) += kappa * phi2 * phi2 * phi(x, i);
-    }
-  }
-
-  pGlobalProfiler.StopTimer("HMC Force");
-}
-
-void main_HMCUpdatePhi(const tPhysicalParams &params, const double dt,
+void main_HMCUpdatePhi(const tScalarModelParams &params, const double dt,
                        RealScalarFieldN &phi, const RealScalarFieldN &pi)
 {
   for(uint i = 0; i < phi.Count(); i++)
     phi[i] += pi[i] * dt;
 }
 
-void main_HMCUpdatePi(const tPhysicalParams &params, const double dt,
+void main_HMCUpdatePi(const tScalarModelParams &params, const double dt,
                       const RealScalarFieldN &phi, RealScalarFieldN &pi, RealScalarFieldN &force)
 {
-  main_HMCforce(params, phi, force);
+  ScalarModel::HMCforce(params, phi, force);
 
   for(uint i = 0; i < phi.Count(); i++)
     pi[i] -= force[i] * dt;
 }
 
-void main_HMCOmelyan(const tPhysicalParams &params, const double dt, const int num_steps,
+void main_HMCOmelyan(const tScalarModelParams &params, const double dt, const int num_steps,
                      RealScalarFieldN &phi, RealScalarFieldN &pi)
 {
   const double xi = 0.1931833;
@@ -263,7 +123,7 @@ void main_HMCOmelyan(const tPhysicalParams &params, const double dt, const int n
   pGlobalProfiler.StopTimer("HMC Omelyan");
 }
 
-void main_HMCLeapfrog(const tPhysicalParams &params, const double dt, const int num_steps,
+void main_HMCLeapfrog(const tScalarModelParams &params, const double dt, const int num_steps,
                       RealScalarFieldN &phi, RealScalarFieldN &pi)
 {
   pGlobalProfiler.StartTimer("HMC Leapfrog");
@@ -317,7 +177,7 @@ int main(int argc, char **argv)
 
   int n = pN;
 
-  tPhysicalParams params;
+  tScalarModelParams params;
   params.lambdaN = pLambdaN;
   params.invM2 = pInvM2;
   params.m2 = pm2;
@@ -327,13 +187,13 @@ int main(int argc, char **argv)
 
   if (pIsLatticeParamsSet)
   {
-    tLatticeParams lattice_params;
+    tLatticeScalarModelParams lattice_params;
     lattice_params.k1 = pLatK1;
     lattice_params.k2 = pLatK2;
     lattice_params.lambda = pLatLambda;
     lattice_params.kappa = pLatKappa;
 
-    main_ConvertCouplings(lattice_params, ndim, params);
+    ScalarModel::ConvertCouplings(lattice_params, ndim, params);
 
     pStdLogs.Write("\nEffective couplings are:\n");
     pStdLogs.Write("  kappa:                                      % -2.15le\n", params.kappa);
@@ -413,7 +273,7 @@ int main(int argc, char **argv)
 
   pStdLogs.Write("\n\nHMC BEGIN\n\n");
 
-  double start_action = main_Action(params, phi_field_0) / (double)vol;
+  double start_action = ScalarModel::Action(params, phi_field_0) / (double)vol;
   pStdLogs.Write("Action on start configuration: %2.15le\n", start_action);
   pStdLogs.Write("Norm of start configuration: %2.15le\n\n", phi_field_0.Norm());
 
@@ -435,7 +295,7 @@ int main(int argc, char **argv)
       h0 += pi_field[i] * pi_field[i] / 2.0;
     }
 
-    h0 += main_Action(params, phi_field_1);
+    h0 += ScalarModel::Action(params, phi_field_1);
 
     switch(integrator_type)
     {
@@ -451,7 +311,7 @@ int main(int argc, char **argv)
     for(uint i = 0; i < n * vol; i++)
       h1 += pi_field[i] * pi_field[i] / 2.0;
 
-    conf_action = main_Action(params, phi_field_1);
+    conf_action = ScalarModel::Action(params, phi_field_1);
     h1 += conf_action;
 
     // Accept/reject step
