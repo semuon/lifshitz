@@ -221,6 +221,12 @@ int main(int argc, char **argv)
 
   VECTOR<double> magnetization_i(n);
 
+  const double auto_tune_dh = 0.1;
+  const double auto_tune_K = pAutoTuneK;
+  VECTOR<double> dh_all_history;
+  VECTOR<double> hmc_dt_history;
+  VECTOR<int> acceptance_history;
+
   action_history.reserve(hmc_num_conf);
   dh_history.reserve(hmc_num_conf);
   exp_dh_history.reserve(hmc_num_conf);
@@ -236,11 +242,18 @@ int main(int argc, char **argv)
   const std::string fname_simple_observables = "simple_observables.txt";
   const std::string fname_magnetization = "magnetization.bin";
   const std::string fname_confs = "confs.bin";
+  const std::string fname_auto_tune = "auto_tune.txt";
 
   FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_write_attr);
   FILE *f_simple_observables = pDataDir.OpenFile(fname_simple_observables, f_txt_write_attr);
   FILE *f_magnetization = pDataDir.OpenFile(fname_magnetization, f_bin_write_attr);
+
+  FILE *f_auto_tune = NULL;
+  if (pAutoTune)
+  {
+    f_auto_tune = pDataDir.OpenFile(fname_auto_tune, f_txt_write_attr);
+  }
 
   RealScalarFieldN pi_field(lat, n);
   RealScalarFieldN phi_field_0(lat, n);
@@ -330,6 +343,44 @@ int main(int argc, char **argv)
       accepted = (dice < alpha);
     }
 
+    dh_all_history.push_back(hmc_dh);
+    hmc_dt_history.push_back(hmc_dt);
+    acceptance_history.push_back( (accepted) ? 1 : 0 );
+
+    // Auto-tune
+    if (pAutoTune)
+    {
+      SAFE_FPRINTF(f_auto_tune, "%2.15le\t%2.15le\t%d\n", hmc_dh, hmc_dt, (accepted) ? 1 : 0);
+      fflush(f_auto_tune);
+
+      double R = auto_tune_dh - hmc_dh;
+      double F;
+
+      switch(integrator_type)
+      {
+        case INTEGRATOR_OMELYAN:
+          F = auto_tune_K * R / (2.0 * hmc_dt);
+        break;
+        case INTEGRATOR_LEAPFROG:
+          F = auto_tune_K * R;
+        default:
+          F = 0;
+        break;
+      }
+
+      if (isfinite(F))
+      {
+        double new_dt = hmc_dt + F;
+
+        if (new_dt < 0.5 * hmc_dt)
+          hmc_dt = hmc_dt / 2;
+        else if (new_dt > 2 * hmc_dt)
+          hmc_dt = hmc_dt * 2;
+        else
+          hmc_dt = new_dt;
+      }
+    }
+
     pStdLogs.Write("conf = %d\n", conf_idx + 1);
 
     if(accepted)
@@ -403,10 +454,20 @@ int main(int argc, char **argv)
     SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], magnetization_abs[i], magnetization_pwr_2[i]);
   }
 
+  // for(int i = 0; i < hmc_dt_history.size(); i++)
+  // {
+  //   SAFE_FPRINTF(f_auto_tune, "%2.15le\t%2.15le\t%2.15le\n", dh_all_history[i], hmc_dt_history[i], acceptance_history[i]);
+  // }
+
   fclose(f_hmc_stat);
   fclose(f_confs);
   fclose(f_simple_observables);
   fclose(f_magnetization);
+
+  if (pAutoTune)
+  {
+    fclose(f_auto_tune);
+  }
 
   int64_t end = Utils::GetTimeMs64();
 

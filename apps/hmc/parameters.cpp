@@ -19,3 +19,6 @@ int pHmcNumSteps = 20;
 double pHmcDt = 0.05;
 int pHmcNumConf = 200;
 int pHmcNumConfStep = 1;
+
+bool pAutoTune = false;
+double pAutoTuneK = 0.01;

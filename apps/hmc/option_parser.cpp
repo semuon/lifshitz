@@ -91,6 +91,9 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   TCLAP::ValueArg<int> argHmcNumConfStep("", "hmc-num-conf-step", "Save every <hmc-num-conf-step> configuration.", false, pHmcNumConfStep, "n", cmd);
   TCLAP::ValueArg<double> argHmcNumDt("", "hmc-dt", "Time step of HMC integrator.", false, pHmcDt, "n", cmd);
 
+  TCLAP::SwitchArg switchAutoTune("", "auto-tune", "Enable automatic adjustment of HMC MD time step.", cmd, false);
+  TCLAP::ValueArg<double> argAutoTuneK("", "auto-tune-K", "Damping coefficient for automatic adjustment of HMC MD time step.", false, pAutoTuneK, "n", cmd);
+
   StartTypeParser default_start_type;
   std::vector<StartTypeParser> allowed_start_types;
   allowed_start_types.push_back(START_CONFIGURATION_ZERO);
@@ -136,6 +139,9 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
   pIntegratorType = argIntegratorType.getValue().type;
 
+  pAutoTune = switchAutoTune.getValue();
+  pAutoTuneK = argAutoTuneK.getValue();
+
   option_parser_CheckParameters();
 }
 
@@ -176,6 +182,12 @@ void option_parser_PrintParameters()
   pStdLogs.Write("  Number of integration steps:                % -d\n", pHmcNumSteps);
   pStdLogs.Write("  Number of configurations:                   % -d\n", pHmcNumConf);
   pStdLogs.Write("  Save configuration on each step:            % -d\n", pHmcNumConfStep);
+
+  pStdLogs.Write("  Auto-adjustment of time step:                %s\n", (pAutoTune) ? "YES" : "NO");
+  if (pAutoTune)
+  {
+    pStdLogs.Write("    Damping coefficient K:                    % -2.4le\n", pAutoTuneK);
+  }
 
   pStdLogs.Write("\n");
 }

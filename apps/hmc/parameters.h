@@ -35,4 +35,7 @@ extern double pHmcDt;
 extern int pHmcNumConf;
 extern int pHmcNumConfStep;
 
+extern bool pAutoTune;
+extern double pAutoTuneK;
+
 #endif
