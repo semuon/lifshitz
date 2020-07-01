@@ -290,7 +290,8 @@ int main(int argc, char **argv)
   pStdLogs.Write("Action on start configuration: %2.15le\n", start_action);
   pStdLogs.Write("Norm of start configuration: %2.15le\n\n", phi_field_0.Norm());
 
-  for(int conf_idx = 0; conf_idx < hmc_num_conf; conf_idx++)
+  int conf_idx;
+  for(conf_idx = 0; conf_idx < hmc_num_conf; conf_idx++)
   {
     double h0 = 0;
     double h1 = 0;
@@ -330,6 +331,14 @@ int main(int argc, char **argv)
     // Accept/reject step
     double hmc_dh = h1 - h0;
     bool accepted = false;
+
+    // Check if energy was finite
+    if (!isfinite(hmc_dh))
+    {
+      pStdLogs.Write("\n\nValue of dh is not finite.\nExiting...\n\n");
+      pStdLogs.WriteError(__FILE__, __LINE__, "Value of dh is not finite");
+      break;
+    }
 
     if (hmc_dh <= 0)
     {
@@ -389,8 +398,6 @@ int main(int argc, char **argv)
 
       phi_field_0 = phi_field_1;
 
-      hmc_accept_rate += 1.0 / hmc_num_conf;
-
       // Measurements
       if ((hmc_num_accepted + 1) % hmc_num_conf_step == 0)
       {
@@ -443,10 +450,12 @@ int main(int argc, char **argv)
 
   pStdLogs.Write("\n\nHMC COMPLETED\n\n");
 
-  pStdLogs.Write("Num. accepted: %d / %d\n", hmc_num_accepted, hmc_num_conf);
-  pStdLogs.Write("Acceptance rate: %2.15le\n", hmc_accept_rate);
-  pStdLogs.Write("<exp(dh)> = %2.15le +/- %2.15le\n", main_VectorMean(exp_dh_history), main_VectorSigma(exp_dh_history));
-  pStdLogs.Write("<dh> = %2.15le +/- %2.15le\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
+  hmc_accept_rate = (conf_idx > 0) ? (double)hmc_num_accepted / (double)conf_idx : 0;
+
+  pStdLogs.Write("Num. accepted: %d / %d\n", hmc_num_accepted, conf_idx);
+  pStdLogs.Write("Acceptance rate: %2.2lf\n", hmc_accept_rate);
+  pStdLogs.Write("<exp(dh)> = %2.4lf +/- %2.4lf\n", main_VectorMean(exp_dh_history), main_VectorSigma(exp_dh_history));
+  pStdLogs.Write("<dh> = %2.4lf +/- %2.4lf\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
 
   for(int i = 0; i < hmc_num_saved; i++)
   {
