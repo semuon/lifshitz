@@ -333,7 +333,7 @@ int main(int argc, char **argv)
     bool accepted = false;
 
     // Check if energy was finite
-    if (!isfinite(hmc_dh))
+    if (!std::isfinite(hmc_dh))
     {
       pStdLogs.Write("\n\nValue of dh is not finite.\nExiting...\n\n");
       pStdLogs.WriteError(__FILE__, __LINE__, "Value of dh is not finite");
@@ -377,7 +377,7 @@ int main(int argc, char **argv)
         break;
       }
 
-      if (isfinite(F))
+      if (std::isfinite(F))
       {
         double new_dt = hmc_dt + F;
 
