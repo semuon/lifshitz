@@ -377,7 +377,7 @@ int main(int argc, char **argv)
         break;
       }
 
-      if (isfinite(F))
+      if ((!accepted || fabs(R) <= auto_tune_dh) && isfinite(F))
       {
         double new_dt = hmc_dt + F;
 
