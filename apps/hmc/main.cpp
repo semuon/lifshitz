@@ -399,6 +399,14 @@ int main(int argc, char **argv)
       phi_field_0 = phi_field_1;
 
       // Measurements
+      action_history.push_back(conf_action / vol);
+      dh_history.push_back(hmc_dh);
+      exp_dh_history.push_back(exp(-hmc_dh));
+
+      SAFE_FPRINTF(f_hmc_stat, "%2.15le\t%2.15le\t%2.15le\n", conf_action / vol, exp(-hmc_dh), hmc_dh);
+      fflush(f_hmc_stat);
+      
+      // Save configuration
       if ((hmc_num_accepted + 1) % hmc_num_conf_step == 0)
       {
         pStdLogs.Write("MEASUREMENTS\n");
@@ -419,15 +427,16 @@ int main(int argc, char **argv)
           m_abs += fabs(cond);
         }
 
-        Formats::DumpBinary(f_magnetization, magnetization_i);
         magnetization_abs.push_back(m_abs);
         magnetization_pwr_2.push_back(m_pwr_2);
-        action_history.push_back(conf_action / vol);
-        dh_history.push_back(hmc_dh);
-        exp_dh_history.push_back(exp(-hmc_dh));
 
-        // Save configuration
         Formats::DumpBinary(f_confs, phi_field_0);
+
+        SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\n", conf_action / vol, m_abs, m_pwr_2);
+        fflush(f_simple_observables);
+
+        Formats::DumpBinary(f_magnetization, magnetization_i);
+        fflush(f_magnetization);
 
         hmc_num_saved++;
       }
@@ -457,11 +466,11 @@ int main(int argc, char **argv)
   pStdLogs.Write("<exp(dh)> = %2.4lf +/- %2.4lf\n", main_VectorMean(exp_dh_history), main_VectorSigma(exp_dh_history));
   pStdLogs.Write("<dh> = %2.4lf +/- %2.4lf\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
 
-  for(int i = 0; i < hmc_num_saved; i++)
-  {
-    SAFE_FPRINTF(f_hmc_stat, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], exp_dh_history[i], dh_history[i]);
-    SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], magnetization_abs[i], magnetization_pwr_2[i]);
-  }
+  // for(int i = 0; i < hmc_num_saved; i++)
+  // {
+  //   SAFE_FPRINTF(f_hmc_stat, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], exp_dh_history[i], dh_history[i]);
+  //   SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\n", action_history[i], magnetization_abs[i], magnetization_pwr_2[i]);
+  // }
 
   // for(int i = 0; i < hmc_dt_history.size(); i++)
   // {
