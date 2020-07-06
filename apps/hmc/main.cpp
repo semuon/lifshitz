@@ -243,6 +243,7 @@ int main(int argc, char **argv)
   const std::string fname_magnetization = "magnetization.bin";
   const std::string fname_confs = "confs.bin";
   const std::string fname_auto_tune = "auto_tune.txt";
+  const std::string fname_last_conf = "last.conf.bin";
 
   FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_write_attr);
@@ -465,6 +466,11 @@ int main(int argc, char **argv)
   pStdLogs.Write("Acceptance rate: %2.2lf\n", hmc_accept_rate);
   pStdLogs.Write("<exp(dh)> = %2.4lf +/- %2.4lf\n", main_VectorMean(exp_dh_history), main_VectorSigma(exp_dh_history));
   pStdLogs.Write("<dh> = %2.4lf +/- %2.4lf\n\n", main_VectorMean(dh_history), main_VectorSigma(dh_history));
+
+  // Save last accepted configuration
+  FILE *f_last_conf = pDataDir.OpenFile(fname_last_conf, f_bin_write_attr);
+  Formats::DumpBinary(f_last_conf, phi_field_0);
+  fclose(f_last_conf);
 
   // for(int i = 0; i < hmc_num_saved; i++)
   // {
