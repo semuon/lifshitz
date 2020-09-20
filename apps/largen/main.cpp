@@ -32,7 +32,7 @@ template <typename T> T main_LatticeOp(PhysicalParams_struct &params, VECTOR<dou
   double m2 = params.m2;
   double invM2 = params.invM2;
   double Z = params.Z;
-  double lambda = params.lambda;
+  //double lambda = params.lambda;
 
   T val = 0;
 
@@ -45,6 +45,33 @@ template <typename T> T main_LatticeOp(PhysicalParams_struct &params, VECTOR<dou
   }
 
   val += m2 + 2.0 * epsilon;
+
+  return val;
+}
+
+template <typename T> T main_LatticeProp(PhysicalParams_struct &params, Lattice &lat, T epsilon)
+{
+  uint ndim = lat.Dim();
+  uint vol = lat.Volume();
+
+  T val = 0;
+  VECTOR<double> p(ndim);
+  VECTOR<int> x(ndim);
+
+  for(uint idx = 0; idx < vol; idx++)
+  {
+    lat.SiteCoordinates(x, idx);
+
+    for(uint i = 0; i < ndim; i++)
+    {
+      uint L = lat.LatticeSize(i);
+      p[i] = 2.0 * M_PI * (double) x[i] / (double) L;
+    }
+
+    T latop = main_LatticeOp(params, p, epsilon);
+
+    val += 1.0 / (latop * vol);
+  }
 
   return val;
 }
@@ -93,6 +120,7 @@ int main(int argc, char **argv)
   p[2] = -0.15;
   double eee = 0.133;
   cout << "" << "ACTION: " << main_LatticeOp(params, p, eee) << endl;
+  cout << "" << "PROP: " << main_LatticeProp(params, lat, eee) << endl;
 
   exit(0);
 
