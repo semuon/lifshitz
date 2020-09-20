@@ -25,7 +25,17 @@ typedef struct PhysicalParams_struct
   double lambda;
 } tPhysicalParams;
 
-template <typename T> T main_LatticeOp(PhysicalParams_struct &params, VECTOR<double> &p, T epsilon)
+template <typename T> bool main_IsFinite(const T value)
+{
+  return std::isfinite(value);
+}
+
+template <> bool main_IsFinite<t_complex>(const t_complex value)
+{
+  return std::isfinite(value.real()) && std::isfinite(value.imag());
+}
+
+template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const T epsilon)
 {
   uint ndim = p.size();
 
@@ -49,14 +59,18 @@ template <typename T> T main_LatticeOp(PhysicalParams_struct &params, VECTOR<dou
   return val;
 }
 
-template <typename T> T main_LatticeProp(PhysicalParams_struct &params, Lattice &lat, T epsilon)
+template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const uint nderiv, const PhysicalParams_struct &params, const Lattice &lat, const T epsilon)
 {
   uint ndim = lat.Dim();
   uint vol = lat.Volume();
 
-  T val = 0;
+  res.clear();
+  res.resize(nderiv, 0);
+
   VECTOR<double> p(ndim);
   VECTOR<int> x(ndim);
+
+  bool stop = false;
 
   for(uint idx = 0; idx < vol; idx++)
   {
@@ -70,10 +84,21 @@ template <typename T> T main_LatticeProp(PhysicalParams_struct &params, Lattice 
 
     T latop = main_LatticeOp(params, p, epsilon);
 
-    val += 1.0 / (latop * vol);
-  }
+    int num = 1;
+    T denum = 1.0;
+    for(uint i = 0; i < nderiv; i++)
+    {
+      denum *= latop;
 
-  return val;
+      res[i] += (double)num / (denum * vol);
+
+      if ( !main_IsFinite(res[i]) ) stop = true;
+
+      num *= -2 * (i + 1);
+    }
+
+    if (stop) break;
+  }
 }
 
 int main(int argc, char **argv)
@@ -114,13 +139,19 @@ int main(int argc, char **argv)
   t_complex solution_action0 = 0;
   t_complex solution_action1 = 0;
 
+  uint nderiv = 4;
   VECTOR<double> p(3);
+  VECTOR<double> res;
   p[0] = 1.0;
   p[1] = 0.3;
   p[2] = -0.15;
   double eee = 0.133;
   cout << "" << "ACTION: " << main_LatticeOp(params, p, eee) << endl;
-  cout << "" << "PROP: " << main_LatticeProp(params, lat, eee) << endl;
+  main_LatticePropAndDerivatives(res, nderiv, params, lat, eee);
+  for(uint i = 0; i < nderiv; i++)
+  {
+    cout << "" << "N = " << i << " : " << res[i] << endl;
+  }
 
   exit(0);
 
