@@ -49,7 +49,7 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   pGlobalProfiler.StartTimer("Action");
 
   double m2 = params.m2;
-  double invM2 = params.invM2;
+  double invM2 = (params.invM2 + params.Z / 12.0);
   double Z = params.Z;
   double lambdaN = params.lambdaN;
   double n = params.N;
@@ -106,7 +106,7 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
   pGlobalProfiler.StartTimer("HMC Force");
 
   double m2 = params.m2;
-  double invM2 = params.invM2;
+  double invM2 = (params.invM2 + params.Z / 12.0);
   double Z = params.Z;
   double lambdaN = params.lambdaN;
   double n = params.N;
