@@ -128,7 +128,7 @@ template <typename T> void main_ContinuumPoles(VECTOR<T> &res, const PhysicalPar
   double M = sqrt(1 / params.invM2);
   double Z = params.Z;
 
-  double mstar = sqrt(m2 + 2.0 * epsilon.real());
+  double mstar = sqrt(m2 + 2.0 * epsilon);
   double gamma = sqrt(1.0 - 4.0 * mstar * mstar / (Z * Z * M * M));
 
   double mp = sqrt(0.5 * Z * M * M * (1.0 + gamma)); // m+
@@ -142,6 +142,96 @@ template <typename T> void main_ContinuumPoles(VECTOR<T> &res, const PhysicalPar
   res[1] = (is_symm_phase) ? mm : 0;
   res[2] = (is_symm_phase) ? 0 : m0;
   res[3] = (is_symm_phase) ? 0 : k0;
+}
+
+bool main_ContinuumBisection(double &epsilon, uint &iters, const PhysicalParams_struct &params, const double tol, const uint maxiter)
+{
+  double m2 = params.m2;
+  double M = sqrt(1 / params.invM2);
+  double Z = params.Z;
+  double lambda = params.lambda;
+
+  VECTOR<double> derivs(3);
+
+  double fval0;
+  double fval1;
+  double fval2;
+
+  double eps0;
+  double eps1;
+  double eps2;
+
+  bool converged = false;
+  bool stop = false;
+
+  double eps_min = -m2 / 2.0;
+  if (Z < 0)
+  {
+    double eps_min2 = (Z * Z * M * M - 4.0 * m2) / 8.0;
+    eps_min = MAX(eps_min, eps_min2);
+  }
+
+  eps0 = eps_min + 10 * tol;
+  eps1 = MAX(eps0, 1.0);
+  eps2 = MAX(eps0, 1.0);
+
+  // Find brackets
+  for(uint iter = 0; iter < maxiter; iter++)
+  {
+    main_ContinuumPropAndDerivatives(derivs, params, eps1);
+    fval1 = lambda * derivs[0] / 2.0;
+    main_ContinuumPropAndDerivatives(derivs, params, eps2);
+    fval2 = lambda * derivs[0] / 2.0;
+
+    if ( !main_IsFinite(fval1) || !main_IsFinite(fval2) )
+    {
+      stop = true;
+      break;
+    }
+
+    if (fval1 > eps1 && fval2 < eps2)
+      break;
+
+    if (fval1 < eps1)
+      eps1 -= (eps1 - eps_min) / 2.0;
+
+    if (fval2 > eps2)
+      eps2 *= 2.0;
+  }
+
+  if (!stop)
+  {
+    for(uint iter = 0; iter < maxiter; iter++)
+    {
+      iters = iter + 1;
+
+      eps0 = eps1 + (eps2 - eps1) / 2.0;
+
+      main_ContinuumPropAndDerivatives(derivs, params, eps0);
+      fval0 = lambda * derivs[0] / 2.0;
+      main_ContinuumPropAndDerivatives(derivs, params, eps1);
+      fval1 = lambda * derivs[0] / 2.0;
+      main_ContinuumPropAndDerivatives(derivs, params, eps2);
+      fval2 = lambda * derivs[0] / 2.0;
+
+      if ( !main_IsFinite(fval0) || !main_IsFinite(fval1) || !main_IsFinite(fval2) )
+        break;
+
+      if (std::abs(eps2 - eps1) < tol && std::abs(fval1 - eps1) < tol)
+      {
+        epsilon = eps1;
+        converged = true;
+        break;
+      }
+
+      if (fval0 < eps0)
+        eps2 = eps0;
+      else
+        eps1 = eps0;
+    }
+  }
+
+  return converged;
 }
 
 void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct &params, const Lattice &lat, const t_complex epsilon)
@@ -388,10 +478,10 @@ int main(int argc, char **argv)
 
   t_complex epsilon0;
   t_complex epsilon1;
-  t_complex epsilon_cont;
+  double epsilon_cont;
 
   VECTOR<t_complex> corr;
-  VECTOR<t_complex> poles;
+  VECTOR<double> poles;
 
   const string history_name = "history.txt";
  
@@ -409,8 +499,9 @@ int main(int argc, char **argv)
 
     epsilon0 = rand_double(-random_range, random_range) + I * rand_double(-random_range, random_range);
 
-    double is_converged = main_Newton(epsilon1, iters, params, lat, epsilon0, method, tolerance, n_iters);
-    double is_converged_cont = main_NewtonContinuum(epsilon_cont, iters_cont, params, epsilon0, method, tolerance, n_iters);
+    bool is_converged = main_Newton(epsilon1, iters, params, lat, epsilon0, method, tolerance, n_iters);
+    //bool is_converged_cont = main_NewtonContinuum(epsilon_cont, iters_cont, params, epsilon0.real(), method, tolerance, n_iters);
+    bool is_converged_cont = main_ContinuumBisection(epsilon_cont, iters_cont, params, tolerance, n_iters);
 
     t_complex action = 0;
 
@@ -435,10 +526,10 @@ int main(int argc, char **argv)
     }
 
     SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le\t%2.15le\t%2.15le", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag(), action.real(), action.imag());
-    SAFE_FPRINTF(f_history, "\t%s\t%d\t%2.15le\t%2.15le", (is_converged_cont) ? "Y" : "N", iters_cont, epsilon_cont.real(), epsilon_cont.imag());
+    SAFE_FPRINTF(f_history, "\t%s\t%d\t%2.15le\t%2.15le", (is_converged_cont) ? "Y" : "N", iters_cont, epsilon_cont, 0.0);
     for(uint i = 0; i < 4; i++)
     {
-      SAFE_FPRINTF(f_history, "\t%2.15le", poles[i].real());
+      SAFE_FPRINTF(f_history, "\t%2.15le", poles[i]);
     }
     for(uint i = 0; i < Lmin; i++)
     {
