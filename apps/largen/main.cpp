@@ -25,12 +25,6 @@ typedef struct PhysicalParams_struct
   double lambda;
 } tPhysicalParams;
 
-typedef enum NewtonMethod_enum
-{
-  ITERATIONS_NEWTON,
-  ITERATIONS_HALLEY
-} tNewtonMethod;
-
 template <typename T> bool main_IsFinite(const T value)
 {
   return std::isfinite(value);
@@ -220,7 +214,7 @@ int main(int argc, char **argv)
   double tolerance = pTolerance;
   double relax_alpha = pRelaxAlpha;
   double random_range = pRandomRange;
-  tNewtonMethod method = ITERATIONS_HALLEY;
+  tNewtonMethod method = pMethod;
 
   t_complex epsilon0;
   t_complex epsilon1;
