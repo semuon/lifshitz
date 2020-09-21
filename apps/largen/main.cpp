@@ -100,6 +100,53 @@ template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const 
   }
 }
 
+void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct &params, const Lattice &lat, const t_complex epsilon)
+{
+  uint ndim = lat.Dim();
+  uint vol = lat.Volume();
+
+  uint Lmin = lat.LatticeSize(0);
+  for(uint i = 1; i < ndim; i++)
+  {
+    if (Lmin > lat.LatticeSize(i))
+      Lmin = lat.LatticeSize(i);
+  }
+
+  corr.clear();
+  corr.resize(Lmin, 0);
+
+  VECTOR<double> p(ndim);
+  VECTOR<int> x(ndim);
+
+  bool stop = false;
+
+  for(uint idx = 0; idx < vol; idx++)
+  {
+    lat.SiteCoordinates(x, idx);
+
+    for(uint i = 0; i < ndim; i++)
+    {
+      uint L = lat.LatticeSize(i);
+      p[i] = 2.0 * M_PI * (double) x[i] / (double) L;
+    }
+
+    t_complex latop = main_LatticeOp(params, p, epsilon);
+
+    for(uint i = 0; i < Lmin; i++)
+    {
+      corr[i] += exp(I * (double)i * p[0]) / (latop * (double)vol);
+
+      if ( !main_IsFinite(corr[i]) )
+      {
+        stop = true;
+        break;
+      }
+    }
+
+    if (stop) break;
+  }
+}
+
 template <typename T> bool main_Newton(T &epsilon, uint &iters, const PhysicalParams_struct &params, const Lattice &lat, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
 {
   epsilon = 0;
@@ -198,6 +245,15 @@ int main(int argc, char **argv)
   Lattice lat(latdims, ndim, nc, nd);
   uint vol = lat.Volume();
 
+  uint Lmin = lat.LatticeSize(0);
+  for(uint i = 1; i < ndim; i++)
+  {
+    if (Lmin > lat.LatticeSize(i))
+      Lmin = lat.LatticeSize(i);
+  }
+
+  cout << "LMIN: " << Lmin << endl;
+
   double invM2 = pInvM2;
   double m2 = pm2;
   double Z = pZ;
@@ -219,6 +275,8 @@ int main(int argc, char **argv)
   t_complex epsilon0;
   t_complex epsilon1;
 
+  VECTOR<t_complex> corr;
+
   const string history_name = "history.txt";
  
   FILE *f_history = NULL;
@@ -238,7 +296,22 @@ int main(int argc, char **argv)
 
     double is_converged = main_Newton(epsilon1, iters, params,lat, epsilon0, method, tolerance, n_iters);
 
-    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le\n", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag());
+    if (is_converged)
+    {
+      main_LatticeCorrelator(corr, params, lat, epsilon1);
+    }
+    else
+    {
+      corr.clear();
+      corr.resize(Lmin, 0);
+    }
+
+    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag());
+    for(uint i = 0; i < Lmin; i++)
+    {
+      SAFE_FPRINTF(f_history, "\t%2.15le\t%2.15le", corr[i].real(), corr[i].imag());
+    }
+    SAFE_FPRINTF(f_history, "\n");
 
     if (is_converged)
     {
