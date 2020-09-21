@@ -362,7 +362,7 @@ bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const 
   return converged;
 }
 
-bool main_LatticeBisection(double &epsilon, uint &iters, const PhysicalParams_struct &params, const double tol, const uint maxiter)
+bool main_LatticeBisection(double &epsilon, double &pmin, uint &iters, const PhysicalParams_struct &params, const Lattice &lat, const double tol, const uint maxiter)
 {
   double m2 = params.m2;
   double M = sqrt(1 / params.invM2);
@@ -383,12 +383,17 @@ bool main_LatticeBisection(double &epsilon, uint &iters, const PhysicalParams_st
   bool converged = false;
   bool stop = false;
 
-  double eps_min = -m2 / 2.0;
-  if (Z < 0)
-  {
-    double eps_min2 = (Z * Z * M * M - 4.0 * m2) / 8.0;
-    eps_min = MAX(eps_min, eps_min2);
-  }
+  iters = 0;
+
+  VECTOR<double> disper_min(2);
+  stop = !main_LatticeDispersionMinimum(disper_min, tol, maxiter, params);
+
+  if (stop)
+    return false;
+
+  double eps_min = -1.0 * (m2 + 3.0 * disper_min[1]) / 2.0;
+
+  pmin = disper_min[0];
 
   eps0 = eps_min + 10 * tol;
   eps1 = MAX(eps0, 1.0);
@@ -397,9 +402,9 @@ bool main_LatticeBisection(double &epsilon, uint &iters, const PhysicalParams_st
   // Find brackets
   for(uint iter = 0; iter < maxiter; iter++)
   {
-    main_ContinuumPropAndDerivatives(derivs, params, eps1);
+    main_LatticePropAndDerivatives(derivs, nderivs, params, lat, eps1);
     fval1 = lambda * derivs[0] / 2.0;
-    main_ContinuumPropAndDerivatives(derivs, params, eps2);
+    main_LatticePropAndDerivatives(derivs, nderivs, params, lat, eps2);
     fval2 = lambda * derivs[0] / 2.0;
 
     if ( !main_IsFinite(fval1) || !main_IsFinite(fval2) )
@@ -426,11 +431,11 @@ bool main_LatticeBisection(double &epsilon, uint &iters, const PhysicalParams_st
 
       eps0 = eps1 + (eps2 - eps1) / 2.0;
 
-      main_ContinuumPropAndDerivatives(derivs, params, eps0);
+      main_LatticePropAndDerivatives(derivs, nderivs, params, lat, eps0);
       fval0 = lambda * derivs[0] / 2.0;
-      main_ContinuumPropAndDerivatives(derivs, params, eps1);
+      main_LatticePropAndDerivatives(derivs, nderivs, params, lat, eps1);
       fval1 = lambda * derivs[0] / 2.0;
-      main_ContinuumPropAndDerivatives(derivs, params, eps2);
+      main_LatticePropAndDerivatives(derivs, nderivs, params, lat, eps2);
       fval2 = lambda * derivs[0] / 2.0;
 
       if ( !main_IsFinite(fval0) || !main_IsFinite(fval1) || !main_IsFinite(fval2) )
@@ -695,8 +700,10 @@ int main(int argc, char **argv)
   double random_range = pRandomRange;
   tNewtonMethod method = pMethod;
 
-  t_complex epsilon0;
-  t_complex epsilon1;
+  //t_complex epsilon0;
+  //t_complex epsilon1;
+  double epsilon1;
+  double pmin;
   double epsilon_cont;
 
   VECTOR<t_complex> corr;
@@ -711,31 +718,31 @@ int main(int argc, char **argv)
     f_history = pDataDir.OpenFile(history_name, f_txt_attr);
   }
 
-  VECTOR<double> derivs;
-  uint npts = 3000;
-  FILE *f_tmp = pDataDir.OpenFile("litter.txt", "w");
-  for(uint i = 0; i < npts + 1; i++)
-  {
-    double eps = -7.0 + 14.0 * (double) i / (double)npts;
+  // VECTOR<double> derivs;
+  // uint npts = 1000;
+  // FILE *f_tmp = pDataDir.OpenFile("litter.txt", "w");
+  // bool converged = main_LatticeDispersionMinimum(derivs, tolerance, n_iters, params);
+  // pmin = derivs[0];
+  // double fmin = derivs[1];
+  // double epsmin = -(params.m2 + 3.0 * fmin) / 2.0;
+  // for(uint i = 0; i < npts + 1; i++)
+  // {
+  //   double eps = epsmin+ 6.0 * (double) i / (double)npts;
 
-    params.Z = eps;
-    bool converged = main_LatticeDispersionMinimum(derivs, tolerance, n_iters, params);
-
-    //main_LatticePropAndDerivatives(derivs, 1, params, lat, eps);
-    SAFE_FPRINTF(f_tmp, "%2.15le\t%s\t%2.15le\t%2.15le\n", eps, (converged) ? "Y" : "N", derivs[0],derivs[1]);
-  }
-  fclose(f_tmp);
-
-  exit(0);
+  //   main_LatticePropAndDerivatives(derivs, 1, params, lat, eps);
+  //   SAFE_FPRINTF(f_tmp, "%2.15le\t%2.15le\n", eps, derivs[0]);
+  // }
+  // fclose(f_tmp);
 
   for(int i_try = 0; i_try < n_tries; i_try++)
   {
     uint iters;
     uint iters_cont;
 
-    epsilon0 = rand_double(-random_range, random_range) + I * rand_double(-random_range, random_range);
+    //epsilon0 = rand_double(-random_range, random_range) + I * rand_double(-random_range, random_range);
 
-    bool is_converged = main_Newton(epsilon1, iters, params, lat, epsilon0, method, tolerance, n_iters);
+    //bool is_converged = main_Newton(epsilon1, iters, params, lat, epsilon0, method, tolerance, n_iters);
+    bool is_converged = main_LatticeBisection(epsilon1, pmin, iters, params, lat, tolerance, n_iters);
     //bool is_converged_cont = main_NewtonContinuum(epsilon_cont, iters_cont, params, epsilon0.real(), method, tolerance, n_iters);
     bool is_converged_cont = main_ContinuumBisection(epsilon_cont, iters_cont, params, tolerance, n_iters);
 
@@ -761,7 +768,7 @@ int main(int argc, char **argv)
       poles.resize(4, 0);
     }
 
-    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le\t%2.15le\t%2.15le", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag(), action.real(), action.imag());
+    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le\t%2.15le\t%2.15le", (is_converged) ? "Y" : "N", iters, epsilon1, 0.0, pmin, 0.0);
     SAFE_FPRINTF(f_history, "\t%s\t%d\t%2.15le\t%2.15le", (is_converged_cont) ? "Y" : "N", iters_cont, epsilon_cont, 0.0);
     for(uint i = 0; i < 4; i++)
     {
