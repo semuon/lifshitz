@@ -220,213 +220,41 @@ int main(int argc, char **argv)
   double tolerance = pTolerance;
   double relax_alpha = pRelaxAlpha;
   double random_range = pRandomRange;
+  tNewtonMethod method = ITERATIONS_HALLEY;
 
-  t_complex solution_action = 0;
-  t_complex solution_action0 = 0;
-  t_complex solution_action1 = 0;
+  t_complex epsilon0;
+  t_complex epsilon1;
 
-  uint nderiv = 4;
-  VECTOR<double> p(3);
-  VECTOR<double> res;
-  p[0] = 1.0;
-  p[1] = 0.3;
-  p[2] = -0.15;
-  double eee = 0.133;
-  cout << "" << "ACTION: " << main_LatticeOp(params, p, eee) << endl;
-  main_LatticePropAndDerivatives(res, nderiv, params, lat, eee);
-  for(uint i = 0; i < nderiv; i++)
-  {
-    cout << "" << "N = " << i << " : " << res[i] << endl;
-  }
-
-  t_complex e1 = 0.5 + I * 0.33;
-  t_complex e2;
-  double uuu;
-  uint iters;
-  bool converged = main_Newton(e2, iters, params, lat, e1, ITERATIONS_HALLEY, 1e-8, 100);
-
-  cout << "CONVERGED: " << converged << endl;
-  cout << "ITERS: " << iters << endl;
-  cout << "EPSILON: " << e2 << endl;
-
-  exit(0);
-
-  // ScalarField nonsense(lat);
-  // ScalarField nonsense2(lat);
-  // ScalarField nonsense3(lat);
-  // ScalarField nonsense4(lat);
-  // ScalarField nonsense5(lat);
-  // nonsense3.Clear();
-  // nonsense4.Clear();
-  // nonsense5.Clear();
-  // for(uint x = 0; x < vol; x++)
-  // {
-  //   nonsense(x) = rand_double(-10,10);
-  //   nonsense2(x) = rand_double(-10,10);
-  // }
-
-  // pGlobalProfiler.StartSection("TEST");
-  // int crm_iter;
-  // double crm_err;
-  // params.epsilon = &nonsense;
-
-  // pGlobalProfiler.StartTimer("LAPACK");
-  // main_Loperator(Lop, lat, nonsense, params);
-  // Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
-  // //Linalg::LapackInvert(Lop, vol);
-  // nonsense3 = Lop * nonsense2;
-  // pGlobalProfiler.StopTimer("LAPACK");
-
-  // double minnnnnn = evals[0];
-  // for(uint x = 1; x < vol; x++)
-  //   if (fabs(evals[x]) < fabs(minnnnnn))
-  //     minnnnnn = evals[x];
-  // cout << "LAPACK MIN ABS EVAL = " << minnnnnn << endl;
-
-  // try
-  // {
-  //   pGlobalProfiler.StartTimer("WITH DEFLATION");
-  //   main_InvertLoperatorWithDeflation(nonsense4, nonsense2, vol, params, 16, 16, 1000000);
-  //   pGlobalProfiler.StopTimer("WITH DEFLATION");
-  //   pGlobalProfiler.StartTimer("WITHOUT DEFLATION");
-  //   Linalg::CRM(main_LoperatorTimesVec, (void *)&params, vol, nonsense2, nonsense4, 1e-8, 1000000, crm_err, crm_iter);
-  //   cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
-  //   //main_InvertLoperatorWithDeflation(nonsense4, nonsense2, vol, params, 0, 16, 100000);
-  //   pGlobalProfiler.StopTimer("WITH DEFLATION");
-  //   //Linalg::CRM(main_LoperatorTimesVec, (void *)&params, vol, nonsense2, nonsense4, 1e-8, 100000, crm_err, crm_iter);
-  // }
-  // catch(std::exception &exc)
-  // {
-  //   cout  << "CRM failed to converge: " << exc.what() << endl;
-  // }
-
-  // //main_LoperatorTimesVec(nonsense4, nonsense2, (void*)&params);
-  // nonsense5 = nonsense4 - nonsense3;
-  // cout << endl;
-  // cout << "DISCREPANCY = " << nonsense5.Norm() << endl;
-  // //cout << "CRM ERR = " << crm_err << ", ITER = " << crm_iter << endl;
-  // cout << endl;
-  // pGlobalProfiler.EndSection("TEST");
-
-  // pGlobalProfiler.PrintStatistics();
-
-  const string history_name = "history.bin";
+  const string history_name = "history.txt";
  
   FILE *f_history = NULL;
 
   if (ModuleMPI::IsMasterNode())
   {
-    f_history = pDataDir.OpenFile(history_name, f_bin_attr);
+    f_history = pDataDir.OpenFile(history_name, f_txt_attr);
   }
 
   bool is_solution_found = false;
 
   for(int i_try = 0; i_try < n_tries; i_try++)
   {
-    bool is_converged = false;
+    uint iters;
 
-    for(uint x = 0; x < vol; x++)
-    {
-      //epsilon0(x) = rand_double(-random_range, random_range);
-      //epsilon0(x) = 1.0 * x;
-    }
+    epsilon0 = rand_double(-random_range, random_range) + I * rand_double(-random_range, random_range);
 
-    for(int i_iter = 0; i_iter < n_iters; i_iter++)
-    {
-      //main_Loperator(Lop, lat, epsilon0, params);
-      //FILE *fff = pDataDir.OpenFile("M.txt", "w");
-      //Formats::PrintMatrix(fff, Lop);
-      //fclose(fff);
-      //return 0;
+    double is_converged = main_Newton(epsilon1, iters, params,lat, epsilon0, method, tolerance, n_iters);
 
-      //Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
-      //Lop.Transpose();
-
-      for(uint n = 0; n < vol; n++)
-      {
-        //if (fabs(evals[n]) < c_flt_epsilon)
-        {
-          //pStdLogs.Write("Zero eigenvalue detected at try #%d, iteration #%d: e[%u] = %2.15le\n", i_try, i_iter, n, evals[n]);
-          break;
-        }
-      }
-
-      for(uint x = 0; x < vol; x++)
-      {
-        //epsilon1(x) = 0;
-
-        //for(uint n = 0; n < vol; n++)
-        //  epsilon1(x) += (double)vol * lambda * norm(Lop(n, x)) / (2.0 * evals[n]);
-      }
-
-      //depsilon = epsilon1 - epsilon0;
-      //epsilon0 = (1.0 - relax_alpha) * epsilon0 + relax_alpha * epsilon1;
-
-      //double de = depsilon.Norm();
-      double de = 0;
-
-      if (isinf(de) || isnan(de))
-      {
-        pStdLogs.Write("Encoutered numerical nonsense at iteration: %d\n", i_iter);
-        break;
-      }
-
-      if (de <= tolerance)
-      {
-        is_converged = true;
-        break;
-      }
-    }
+    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le\n", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag());
 
     if (is_converged)
     {
-      pStdLogs.Write("Converged at try %d\n", i_try);
-
-      t_complex action = 0;
-      t_complex action0 = 0;
-      t_complex action1 = 0;
+      pStdLogs.Write("Converged at try %d within %d iterations\n", i_try, iters);
 
       //for(uint x = 0; x < vol; x++)
       //  action0 -= epsilon0(x) * epsilon0(x) / (double) vol;
-
-      //main_Loperator(Lop, lat, epsilon0, params);
-      //Linalg::LapackHermitianEigensystem(Lop, evals.data(), vol);
-      //Lop.Transpose();
-
       //for(uint n = 0; n < vol; n++)
       //  action1 += lambda * log((t_complex)evals[n]) / 2.0;
-
       //action = action0 + action1;
-
-      //bool is_homogeneous = main_IsHomogeneousVector(epsilon0, c_flt_epsilon);
-
-      //pStdLogs.Write("Found %s solution with the action: (%2.15le, %2.15le)\n", (is_homogeneous) ? "homogeneous": "non-homogeneous", i_try, real(action), imag(action));
-
-      //if (is_homogeneous)
-      {
-        //t_complex e0 = epsilon0[0];
-        //pStdLogs.Write("e0 = (%2.15le, %2.15le), m^2_eff = (%2.15le, %2.15le)\n", real(e0), imag(e0), real(2.0 * e0 + m2), imag(2.0 * e0 + m2));
-      }
-
-      SAFE_FWRITE(&action, sizeof(t_complex), 1, f_history);
-      SAFE_FWRITE(&action0, sizeof(t_complex), 1, f_history);
-      SAFE_FWRITE(&action1, sizeof(t_complex), 1, f_history);
-      //Formats::DumpBinary(f_history, epsilon0);
-
-      if (!is_solution_found || (real(solution_action) > real(action)))
-      {
-        pStdLogs.Write("This solution has a lower action\n");
-
-        //solution = epsilon0;
-        //solution_evecs = Lop;
-        //solution_evals = evals;
-
-        solution_action = action;
-        solution_action0 = action0;
-        solution_action1 = action1;
-
-        is_solution_found = true;
-      }
     }
     else
     {
@@ -435,29 +263,9 @@ int main(int argc, char **argv)
     
   }
 
-  const string loperator_name = "Loperator.bin";
-  const string solution_name = "solution.bin";
- 
-  FILE *f_loperator = NULL;
-  FILE *f_solution = NULL;
-
   if (ModuleMPI::IsMasterNode())
   {
     fclose(f_history);
-
-    f_loperator = pDataDir.OpenFile(loperator_name, f_bin_attr);
-    f_solution = pDataDir.OpenFile(solution_name, f_bin_attr);
-
-    //Formats::DumpBinary(f_loperator, solution_evals);
-    //Formats::DumpBinary(f_loperator, solution_evecs);
-
-    SAFE_FWRITE(&solution_action, sizeof(t_complex), 1, f_solution);
-    SAFE_FWRITE(&solution_action0, sizeof(t_complex), 1, f_solution);
-    SAFE_FWRITE(&solution_action1, sizeof(t_complex), 1, f_solution);
-    //Formats::DumpBinary(f_solution, solution);
-
-    fclose(f_loperator);
-    fclose(f_solution);
   }
 
   int64_t end = Utils::GetTimeMs64();
