@@ -25,6 +25,12 @@ typedef struct PhysicalParams_struct
   double lambda;
 } tPhysicalParams;
 
+typedef enum NewtonMethod_enum
+{
+  ITERATIONS_NEWTON,
+  ITERATIONS_HALLEY
+} tNewtonMethod;
+
 template <typename T> bool main_IsFinite(const T value)
 {
   return std::isfinite(value);
@@ -42,7 +48,6 @@ template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, cons
   double m2 = params.m2;
   double invM2 = params.invM2;
   double Z = params.Z;
-  //double lambda = params.lambda;
 
   T val = 0;
 
@@ -90,7 +95,7 @@ template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const 
     {
       denum *= latop;
 
-      res[i] += (double)num / (denum * vol);
+      res[i] += (double)num / (denum * (double)vol);
 
       if ( !main_IsFinite(res[i]) ) stop = true;
 
@@ -101,12 +106,93 @@ template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const 
   }
 }
 
+template <typename T> bool main_Newton(T &epsilon, uint &iters, const PhysicalParams_struct &params, const Lattice &lat, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
+{
+  epsilon = 0;
+  iters = 0;
+
+  double lambda = params.lambda;
+
+  T epsilon1 = epsilon0;
+  T epsilon2 = 0;
+
+  T fval = 0;
+  T d1fval = 0;
+  T d2fval = 0;
+
+  uint nderivs;
+  VECTOR<T> derivs;
+
+  bool converged = false;
+  bool stop = false;
+
+  switch(method)
+  {
+    case ITERATIONS_NEWTON:
+      nderivs = 2;
+      break;
+    case ITERATIONS_HALLEY:
+      nderivs = 3;
+      break;
+    default:
+      THROW_EXCEPTION(AssertFailure, "Unknown method");
+  }
+
+  for(uint iter = 0; iter < maxiter; iter++)
+  {
+    iters = iter + 1;
+
+    main_LatticePropAndDerivatives(derivs, nderivs, params, lat, epsilon1);
+
+    for(uint i = 0; i < nderivs; i++)
+    {
+      if ( !main_IsFinite(derivs[i]) )
+      {
+        stop = true;
+        break;
+      }
+    }
+
+    if (stop) break;
+
+    switch(method)
+    {
+      case ITERATIONS_NEWTON:
+        fval = (lambda / 2.0) * derivs[0] - epsilon1;
+        d1fval = (lambda / 2.0) * derivs[1] - 1.0;
+        epsilon2 = epsilon1 - fval / d1fval;
+        break;
+      case ITERATIONS_HALLEY:
+        fval = (lambda / 2.0) * derivs[0] - epsilon1;
+        d1fval = (lambda / 2.0) * derivs[1] - 1.0;
+        d2fval = (lambda / 2.0) * derivs[2];
+        epsilon2 = epsilon1 - 2.0 * fval * d1fval / (2.0 * d1fval * d1fval - fval * d2fval);
+        break;
+      default:
+        THROW_EXCEPTION(AssertFailure, "Unknown method");
+    }
+
+    if ( !main_IsFinite(epsilon2) ) break;
+
+    if ( std::abs(fval) < tol && std::abs(epsilon2 - epsilon1) < tol )
+    {
+      converged = true;
+      break;
+    }
+
+    epsilon1 = epsilon2;
+  }
+
+  epsilon = epsilon1;
+  return converged;
+}
+
 int main(int argc, char **argv)
 {
   const string f_bin_attr = "wb";
   const string f_txt_attr = "w";
 
-  common_AppInit(argc, argv, "Lifshitz regime. Large N hoogeneous epsilon");
+  common_AppInit(argc, argv, "Lifshitz regime. Large N homogeneous epsilon");
   int64_t begin = Utils::GetTimeMs64();
 
   const uint nd = 1;
@@ -152,6 +238,16 @@ int main(int argc, char **argv)
   {
     cout << "" << "N = " << i << " : " << res[i] << endl;
   }
+
+  t_complex e1 = 0.5 + I * 0.33;
+  t_complex e2;
+  double uuu;
+  uint iters;
+  bool converged = main_Newton(e2, iters, params, lat, e1, ITERATIONS_HALLEY, 1e-8, 100);
+
+  cout << "CONVERGED: " << converged << endl;
+  cout << "ITERS: " << iters << endl;
+  cout << "EPSILON: " << e2 << endl;
 
   exit(0);
 
