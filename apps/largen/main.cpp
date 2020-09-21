@@ -100,6 +100,50 @@ template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const 
   }
 }
 
+// This always returns 3 derivatives
+template <typename T> void main_ContinuumPropAndDerivatives(VECTOR<T> &res, const PhysicalParams_struct &params, const T epsilon)
+{
+  res.clear();
+  res.resize(3);
+
+  double m2 = params.m2;
+  double M = sqrt(1 / params.invM2);
+  double Z = params.Z;
+
+  T mstar = sqrt(m2 + 2.0 * epsilon);
+  T mmodul = sqrt(M * (2.0 * mstar + Z * M));
+
+  res[0] = M * M / (4.0 * M_PI * mmodul);
+  res[1] = -1.0 * M * M * M / (4.0 * M_PI * mmodul * mmodul * mmodul * mstar);
+  res[2] = 3.0 * M * M * M * M / (4.0 * M_PI * mmodul * mmodul * mmodul * mmodul * mmodul * mstar * mstar) + M * M * M / (4.0 * M_PI * mmodul * mmodul * mmodul * mstar * mstar * mstar);
+}
+
+// mplus, mminus, mmodul, kmodul
+template <typename T> void main_ContinuumPoles(VECTOR<T> &res, const PhysicalParams_struct &params, const T epsilon)
+{
+  res.clear();
+  res.resize(4);
+
+  double m2 = params.m2;
+  double M = sqrt(1 / params.invM2);
+  double Z = params.Z;
+
+  double mstar = sqrt(m2 + 2.0 * epsilon.real());
+  double gamma = sqrt(1.0 - 4.0 * mstar * mstar / (Z * Z * M * M));
+
+  double mp = sqrt(0.5 * Z * M * M * (1.0 + gamma)); // m+
+  double mm = sqrt(0.5 * Z * M * M * (1.0 - gamma)); // m-
+  double m0 = 0.5 * sqrt(M * (2.0 * mstar + Z * M)); // m0
+  double k0 = 0.5 * sqrt(M * (2.0 * mstar - Z * M)); // k0
+
+  bool is_symm_phase = (4.0 * mstar * mstar < Z * Z * M * M);
+
+  res[0] = (is_symm_phase) ? mp : 0;
+  res[1] = (is_symm_phase) ? mm : 0;
+  res[2] = (is_symm_phase) ? 0 : m0;
+  res[3] = (is_symm_phase) ? 0 : k0;
+}
+
 void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct &params, const Lattice &lat, const t_complex epsilon)
 {
   uint ndim = lat.Dim();
@@ -228,6 +272,76 @@ template <typename T> bool main_Newton(T &epsilon, uint &iters, const PhysicalPa
   return converged;
 }
 
+template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const PhysicalParams_struct &params, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
+{
+  const uint nderivs = 3;
+
+  epsilon = 0;
+  iters = 0;
+
+  double lambda = params.lambda;
+
+  T epsilon1 = epsilon0;
+  T epsilon2 = 0;
+
+  VECTOR<T> derivs(3);
+
+  T fval = 0;
+  T d1fval = 0;
+  T d2fval = 0;
+
+  bool converged = false;
+  bool stop = false;
+
+  for(uint iter = 0; iter < maxiter; iter++)
+  {
+    iters = iter + 1;
+
+    main_ContinuumPropAndDerivatives(derivs, params, epsilon1);
+
+    for(uint i = 0; i < nderivs; i++)
+    {
+      if ( !main_IsFinite(derivs[i]) )
+      {
+        stop = true;
+        break;
+      }
+    }
+
+    if (stop) break;
+
+    switch(method)
+    {
+      case ITERATIONS_NEWTON:
+        fval = (lambda / 2.0) * derivs[0] - epsilon1;
+        d1fval = (lambda / 2.0) * derivs[1] - 1.0;
+        epsilon2 = epsilon1 - fval / d1fval;
+        break;
+      case ITERATIONS_HALLEY:
+        fval = (lambda / 2.0) * derivs[0] - epsilon1;
+        d1fval = (lambda / 2.0) * derivs[1] - 1.0;
+        d2fval = (lambda / 2.0) * derivs[2];
+        epsilon2 = epsilon1 - 2.0 * fval * d1fval / (2.0 * d1fval * d1fval - fval * d2fval);
+        break;
+      default:
+        THROW_EXCEPTION(AssertFailure, "Unknown method");
+    }
+
+    if ( !main_IsFinite(epsilon2) ) break;
+
+    if ( std::abs(fval) < tol && std::abs(epsilon2 - epsilon1) < tol )
+    {
+      converged = true;
+      break;
+    }
+
+    epsilon1 = epsilon2;
+  }
+
+  epsilon = epsilon1;
+  return converged;
+}
+
 int main(int argc, char **argv)
 {
   const string f_bin_attr = "wb";
@@ -274,8 +388,10 @@ int main(int argc, char **argv)
 
   t_complex epsilon0;
   t_complex epsilon1;
+  t_complex epsilon_cont;
 
   VECTOR<t_complex> corr;
+  VECTOR<t_complex> poles;
 
   const string history_name = "history.txt";
  
@@ -286,15 +402,17 @@ int main(int argc, char **argv)
     f_history = pDataDir.OpenFile(history_name, f_txt_attr);
   }
 
-  bool is_solution_found = false;
-
   for(int i_try = 0; i_try < n_tries; i_try++)
   {
     uint iters;
+    uint iters_cont;
 
     epsilon0 = rand_double(-random_range, random_range) + I * rand_double(-random_range, random_range);
 
-    double is_converged = main_Newton(epsilon1, iters, params,lat, epsilon0, method, tolerance, n_iters);
+    double is_converged = main_Newton(epsilon1, iters, params, lat, epsilon0, method, tolerance, n_iters);
+    double is_converged_cont = main_NewtonContinuum(epsilon_cont, iters_cont, params, epsilon0, method, tolerance, n_iters);
+
+    t_complex action = 0;
 
     if (is_converged)
     {
@@ -306,7 +424,22 @@ int main(int argc, char **argv)
       corr.resize(Lmin, 0);
     }
 
-    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag());
+    if (is_converged_cont)
+    {
+      main_ContinuumPoles(poles, params, epsilon_cont);
+    }
+    else
+    {
+      poles.clear();
+      poles.resize(4, 0);
+    }
+
+    SAFE_FPRINTF(f_history, "%s\t%d\t%2.15le\t%2.15le\t%2.15le\t%2.15le", (is_converged) ? "Y" : "N", iters, epsilon1.real(), epsilon1.imag(), action.real(), action.imag());
+    SAFE_FPRINTF(f_history, "\t%s\t%d\t%2.15le\t%2.15le", (is_converged_cont) ? "Y" : "N", iters_cont, epsilon_cont.real(), epsilon_cont.imag());
+    for(uint i = 0; i < 4; i++)
+    {
+      SAFE_FPRINTF(f_history, "\t%2.15le", poles[i].real());
+    }
     for(uint i = 0; i < Lmin; i++)
     {
       SAFE_FPRINTF(f_history, "\t%2.15le\t%2.15le", corr[i].real(), corr[i].imag());
