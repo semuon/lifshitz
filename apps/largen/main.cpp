@@ -234,6 +234,225 @@ bool main_ContinuumBisection(double &epsilon, uint &iters, const PhysicalParams_
   return converged;
 }
 
+void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, const PhysicalParams_struct &params)
+{
+  res.clear();
+  res.resize(3);
+
+  double M = sqrt(1 / params.invM2);
+  double Z = params.Z;
+
+  double K1 = 1.0 / (M * M) + Z / 12.0;
+  double K2 = -Z;
+
+  res[0] = 2.0 * K1 * (cos(2.0 * p) - 4.0 * cos(p) + 3.0) + 2.0 * K2 * (cos(p) - 1.0);
+  res[1] = 2.0 * K1 * (-2.0 * sin(2.0 * p) + 4.0 * sin(p)) - 2.0 * K2 * sin(p);
+  res[2] = 2.0 * K1 * (-4.0 * cos(2.0 * p) + 4.0 * cos(p)) - 2.0 * K2 * cos(p);
+}
+
+bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const uint maxiter, const PhysicalParams_struct &params)
+{
+  res.clear();
+  res.resize(2);
+
+  double p0;
+  double p1 = 0;
+  double p2 = M_PI;
+
+  double pmin = 0;
+  double fmin = 0;
+
+  double e0;
+  double e1;
+  double e2;
+
+  double f1;
+  double f2;
+
+  bool stop = false;
+  bool converged = false;
+
+  VECTOR<double> derivs;
+
+  main_LatticeDispersionDerivatives(derivs, p1, params);
+  f1 = derivs[0];
+  e1 = derivs[2];
+  main_LatticeDispersionDerivatives(derivs, p2, params);
+  f2 = derivs[0];
+  e2 = derivs[2];
+
+  if (e1 >= 0 && e2 < 0)
+  {
+    pmin = p1;
+    fmin = f1;
+    converged = true;
+  }
+  else if (e1 < 0 && e2 >= 0)
+  {
+    pmin = p2;
+    fmin = f2;
+    converged = true;
+  }
+  else
+  {
+    // Find brackets
+    p1 = M_PI / 2.0;
+    p2 = M_PI / 2.0;
+    stop = true;
+    for(uint iter = 0; iter < maxiter; iter++)
+    {
+      main_LatticeDispersionDerivatives(derivs, p1, params);
+      e1 = derivs[1];
+      main_LatticeDispersionDerivatives(derivs, p2, params);
+      e2 = derivs[1];
+
+      if (e1 * e2 < 0)
+      {
+        stop = false;
+        break;
+      }
+      else
+      {
+        p1 = p1 / 2.0;
+        p2 = M_PI - p1;
+      }
+    }
+
+    if (!stop)
+    {
+      for(uint iter = 0; iter < maxiter; iter++)
+      {
+        p0 = p1 + (p2 - p1) / 2.0;
+
+        main_LatticeDispersionDerivatives(derivs, p0, params);
+        e0 = derivs[1];
+        main_LatticeDispersionDerivatives(derivs, p1, params);
+        f1 = derivs[0];
+        e1 = derivs[1];
+        main_LatticeDispersionDerivatives(derivs, p2, params);
+        e2 = derivs[1];
+
+        if (std::abs(p2 - p1) < tol && std::abs(e1) < tol)
+        {
+          pmin = p1;
+          fmin = f1;
+          converged = true;
+          break;
+        }
+
+        if (e0 * e1 < 0)
+          p2 = p0;
+        else
+          p1 = p0;
+      }
+    }
+  }
+
+  if (converged)
+  {
+    res[0] = pmin;
+    res[1] = fmin;
+  }
+  else
+  {
+    res[0] = 0;
+    res[0] = 0;
+  }
+
+  return converged;
+}
+
+bool main_LatticeBisection(double &epsilon, uint &iters, const PhysicalParams_struct &params, const double tol, const uint maxiter)
+{
+  double m2 = params.m2;
+  double M = sqrt(1 / params.invM2);
+  double Z = params.Z;
+  double lambda = params.lambda;
+
+  const uint nderivs = 1;
+  VECTOR<double> derivs(nderivs);
+
+  double fval0;
+  double fval1;
+  double fval2;
+
+  double eps0;
+  double eps1;
+  double eps2;
+
+  bool converged = false;
+  bool stop = false;
+
+  double eps_min = -m2 / 2.0;
+  if (Z < 0)
+  {
+    double eps_min2 = (Z * Z * M * M - 4.0 * m2) / 8.0;
+    eps_min = MAX(eps_min, eps_min2);
+  }
+
+  eps0 = eps_min + 10 * tol;
+  eps1 = MAX(eps0, 1.0);
+  eps2 = MAX(eps0, 1.0);
+
+  // Find brackets
+  for(uint iter = 0; iter < maxiter; iter++)
+  {
+    main_ContinuumPropAndDerivatives(derivs, params, eps1);
+    fval1 = lambda * derivs[0] / 2.0;
+    main_ContinuumPropAndDerivatives(derivs, params, eps2);
+    fval2 = lambda * derivs[0] / 2.0;
+
+    if ( !main_IsFinite(fval1) || !main_IsFinite(fval2) )
+    {
+      stop = true;
+      break;
+    }
+
+    if (fval1 > eps1 && fval2 < eps2)
+      break;
+
+    if (fval1 < eps1)
+      eps1 -= (eps1 - eps_min) / 2.0;
+
+    if (fval2 > eps2)
+      eps2 *= 2.0;
+  }
+
+  if (!stop)
+  {
+    for(uint iter = 0; iter < maxiter; iter++)
+    {
+      iters = iter + 1;
+
+      eps0 = eps1 + (eps2 - eps1) / 2.0;
+
+      main_ContinuumPropAndDerivatives(derivs, params, eps0);
+      fval0 = lambda * derivs[0] / 2.0;
+      main_ContinuumPropAndDerivatives(derivs, params, eps1);
+      fval1 = lambda * derivs[0] / 2.0;
+      main_ContinuumPropAndDerivatives(derivs, params, eps2);
+      fval2 = lambda * derivs[0] / 2.0;
+
+      if ( !main_IsFinite(fval0) || !main_IsFinite(fval1) || !main_IsFinite(fval2) )
+        break;
+
+      if (std::abs(eps2 - eps1) < tol && std::abs(fval1 - eps1) < tol)
+      {
+        epsilon = eps1;
+        converged = true;
+        break;
+      }
+
+      if (fval0 < eps0)
+        eps2 = eps0;
+      else
+        eps1 = eps0;
+    }
+  }
+
+  return converged;
+}
+
 void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct &params, const Lattice &lat, const t_complex epsilon)
 {
   uint ndim = lat.Dim();
@@ -491,6 +710,23 @@ int main(int argc, char **argv)
   {
     f_history = pDataDir.OpenFile(history_name, f_txt_attr);
   }
+
+  VECTOR<double> derivs;
+  uint npts = 3000;
+  FILE *f_tmp = pDataDir.OpenFile("litter.txt", "w");
+  for(uint i = 0; i < npts + 1; i++)
+  {
+    double eps = -7.0 + 14.0 * (double) i / (double)npts;
+
+    params.Z = eps;
+    bool converged = main_LatticeDispersionMinimum(derivs, tolerance, n_iters, params);
+
+    //main_LatticePropAndDerivatives(derivs, 1, params, lat, eps);
+    SAFE_FPRINTF(f_tmp, "%2.15le\t%s\t%2.15le\t%2.15le\n", eps, (converged) ? "Y" : "N", derivs[0],derivs[1]);
+  }
+  fclose(f_tmp);
+
+  exit(0);
 
   for(int i_try = 0; i_try < n_tries; i_try++)
   {
