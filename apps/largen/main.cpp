@@ -45,13 +45,23 @@ template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, cons
 
   T val = 0;
 
+  T sum_cos_k = 0;
+  T sum_cos_2k = 0;
+  T nd = (T)((double)ndim);
+
   for(uint i = 0; i < ndim; i++)
   {
     double pi = p[i];
 
-    val += 2.0 * (invM2 + Z / 12.0) * ( cos(2.0 * pi) - 4.0 * cos(pi) + 3.0 ) - 
-           2.0 * Z * ( cos(pi) - 1.0 );
+    sum_cos_k += cos(pi);
+    sum_cos_2k += cos(2.0 * pi);
+
+    //val += 2.0 * (invM2 + Z / 12.0) * ( cos(2.0 * pi) - 4.0 * cos(pi) + 3.0 ) - 
+    //       2.0 * Z * ( cos(pi) - 1.0 );
   }
+
+  val += invM2 * ( 4.0 * sum_cos_k * sum_cos_k - 8.0 * nd * sum_cos_k + 4.0 * nd * nd );
+  val -= Z * ( 2.0 * (sum_cos_k - nd) - (1.0 / 6.0) * (sum_cos_2k - 4.0 * sum_cos_k + 3.0 * nd) );
 
   val += m2 + 2.0 * epsilon;
 
@@ -717,6 +727,17 @@ int main(int argc, char **argv)
   {
     f_history = pDataDir.OpenFile(history_name, f_txt_attr);
   }
+
+  //t_complex eps = 0.133;
+  //VECTOR<double> ppp(3);
+  //ppp[0] = 1.0;
+  //ppp[1] = 0.3;
+  //ppp[2] = -0.15;
+  //t_complex opop = main_LatticeOp(params, ppp, eps);
+
+  //cout << "OP: " << opop << endl;
+
+  //exit(0);
 
   // VECTOR<double> derivs;
   // uint npts = 1000;
