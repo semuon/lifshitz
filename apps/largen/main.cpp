@@ -244,23 +244,32 @@ bool main_ContinuumBisection(double &epsilon, uint &iters, const PhysicalParams_
   return converged;
 }
 
-void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, const PhysicalParams_struct &params)
+void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, const uint ndim, const PhysicalParams_struct &params)
 {
   res.clear();
   res.resize(3);
 
-  double M = sqrt(1 / params.invM2);
+  double invM2 = params.invM2;
   double Z = params.Z;
 
-  double K1 = 1.0 / (M * M) + Z / 12.0;
-  double K2 = -Z;
+  double K1 = 4.0 * invM2;
+  double K2 = -8.0 * ((double)ndim * invM2 + Z / 3.0);
+  double K3 = Z / 6.0;
+  double K4 = 4.0 * (double)ndim * (double)ndim * invM2 + 5.0 * (double)ndim * Z / 2.0;
 
-  res[0] = 2.0 * K1 * (cos(2.0 * p) - 4.0 * cos(p) + 3.0) + 2.0 * K2 * (cos(p) - 1.0);
-  res[1] = 2.0 * K1 * (-2.0 * sin(2.0 * p) + 4.0 * sin(p)) - 2.0 * K2 * sin(p);
-  res[2] = 2.0 * K1 * (-4.0 * cos(2.0 * p) + 4.0 * cos(p)) - 2.0 * K2 * cos(p);
+  res[0] = K1 * (cos(p) + 2.0) * (cos(p) + 2.0) + K2 * (cos(p) + 2.0) + K3 * (cos(2.0 * p) + 2.0) + K4;
+  res[1] = -2.0 * K1 * (cos(p) + 2.0) * sin(p) - K2 * sin(p) - 2.0 * K3 * sin(2.0 * p);
+  res[2] = 2.0 * K1 * sin(p) * sin(p) - 2.0 * K1 * (cos(p) + 2.0) * cos(p) - K2 * cos(p) - 4.0 * K3 * cos(2.0 * p);
+
+  //double K1 = 1.0 / (M * M) + Z / 12.0;
+  //double K2 = -Z;
+
+  //res[0] = 2.0 * K1 * (cos(2.0 * p) - 4.0 * cos(p) + 3.0) + 2.0 * K2 * (cos(p) - 1.0);
+  //res[1] = 2.0 * K1 * (-2.0 * sin(2.0 * p) + 4.0 * sin(p)) - 2.0 * K2 * sin(p);
+  //res[2] = 2.0 * K1 * (-4.0 * cos(2.0 * p) + 4.0 * cos(p)) - 2.0 * K2 * cos(p);
 }
 
-bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const uint maxiter, const PhysicalParams_struct &params)
+bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const uint maxiter, const uint ndim, const PhysicalParams_struct &params)
 {
   res.clear();
   res.resize(2);
@@ -284,10 +293,10 @@ bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const 
 
   VECTOR<double> derivs;
 
-  main_LatticeDispersionDerivatives(derivs, p1, params);
+  main_LatticeDispersionDerivatives(derivs, p1, ndim, params);
   f1 = derivs[0];
   e1 = derivs[2];
-  main_LatticeDispersionDerivatives(derivs, p2, params);
+  main_LatticeDispersionDerivatives(derivs, p2, ndim, params);
   f2 = derivs[0];
   e2 = derivs[2];
 
@@ -311,9 +320,9 @@ bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const 
     stop = true;
     for(uint iter = 0; iter < maxiter; iter++)
     {
-      main_LatticeDispersionDerivatives(derivs, p1, params);
+      main_LatticeDispersionDerivatives(derivs, p1, ndim, params);
       e1 = derivs[1];
-      main_LatticeDispersionDerivatives(derivs, p2, params);
+      main_LatticeDispersionDerivatives(derivs, p2, ndim, params);
       e2 = derivs[1];
 
       if (e1 * e2 < 0)
@@ -334,12 +343,12 @@ bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const 
       {
         p0 = p1 + (p2 - p1) / 2.0;
 
-        main_LatticeDispersionDerivatives(derivs, p0, params);
+        main_LatticeDispersionDerivatives(derivs, p0, ndim, params);
         e0 = derivs[1];
-        main_LatticeDispersionDerivatives(derivs, p1, params);
+        main_LatticeDispersionDerivatives(derivs, p1, ndim, params);
         f1 = derivs[0];
         e1 = derivs[1];
-        main_LatticeDispersionDerivatives(derivs, p2, params);
+        main_LatticeDispersionDerivatives(derivs, p2, ndim, params);
         e2 = derivs[1];
 
         if (std::abs(p2 - p1) < tol && std::abs(e1) < tol)
@@ -374,9 +383,11 @@ bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const 
 
 bool main_LatticeBisection(double &epsilon, double &pmin, uint &iters, const PhysicalParams_struct &params, const Lattice &lat, const double tol, const uint maxiter)
 {
+  uint ndim = lat.Dim();
+
   double m2 = params.m2;
-  double M = sqrt(1 / params.invM2);
-  double Z = params.Z;
+  //double M = sqrt(1 / params.invM2);
+  //double Z = params.Z;
   double lambda = params.lambda;
 
   const uint nderivs = 1;
@@ -396,12 +407,12 @@ bool main_LatticeBisection(double &epsilon, double &pmin, uint &iters, const Phy
   iters = 0;
 
   VECTOR<double> disper_min(2);
-  stop = !main_LatticeDispersionMinimum(disper_min, tol, maxiter, params);
+  stop = !main_LatticeDispersionMinimum(disper_min, tol, maxiter, ndim, params);
 
   if (stop)
     return false;
 
-  double eps_min = -1.0 * (m2 + 3.0 * disper_min[1]) / 2.0;
+  double eps_min = -1.0 * (m2 + disper_min[1]) / 2.0;
 
   pmin = disper_min[0];
 
@@ -740,20 +751,23 @@ int main(int argc, char **argv)
   //exit(0);
 
   // VECTOR<double> derivs;
-  // uint npts = 1000;
+  // uint npts = 3000;
   // FILE *f_tmp = pDataDir.OpenFile("litter.txt", "w");
-  // bool converged = main_LatticeDispersionMinimum(derivs, tolerance, n_iters, params);
+  // bool converged = main_LatticeDispersionMinimum(derivs, tolerance, n_iters, ndim, params);
   // pmin = derivs[0];
   // double fmin = derivs[1];
-  // double epsmin = -(params.m2 + 3.0 * fmin) / 2.0;
+  // double epsmin = -(params.m2 + fmin) / 2.0;
+  // //double epsmin = -3.0;
   // for(uint i = 0; i < npts + 1; i++)
   // {
-  //   double eps = epsmin+ 6.0 * (double) i / (double)npts;
+  //   double eps = epsmin+ 2.0 * (double) i / (double)npts;
 
   //   main_LatticePropAndDerivatives(derivs, 1, params, lat, eps);
   //   SAFE_FPRINTF(f_tmp, "%2.15le\t%2.15le\n", eps, derivs[0]);
   // }
   // fclose(f_tmp);
+
+  // exit(0);
 
   for(int i_try = 0; i_try < n_tries; i_try++)
   {
