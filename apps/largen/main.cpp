@@ -5,6 +5,7 @@
 #include "vector_field.h"
 #include "spinor_field.h"
 #include "scalar_field.h"
+#include "scalar_model.h"
 #include "matrix.h"
 #include "lattice.h"
 #include "formats.h"
@@ -738,6 +739,81 @@ int main(int argc, char **argv)
   {
     f_history = pDataDir.OpenFile(history_name, f_txt_attr);
   }
+
+  // // Testing HMC action
+  // const uint n = 1;
+  // tScalarModelParams hmc_params;
+
+  // const double eps0 = 0;
+
+  // hmc_params.N = n;
+  // hmc_params.Z = Z;
+  // hmc_params.invM2 = invM2;
+  // hmc_params.m2 = m2;
+  // hmc_params.kappa = 0;
+  // hmc_params.lambdaN = 0;
+
+  // params.lambda = 0;
+
+  // RealScalarFieldN phi_x(lat, n);
+  // ScalarFieldN phi_k(lat, n);
+
+  // for(uint x = 0; x < vol; x++)
+  // {
+  //   const uint i = 0;
+
+  //   phi_x(x, i) = rand_double(-1.0, 1.0);
+  // }
+
+  // VECTOR<int> kvec(ndim);
+  // VECTOR<int> xvec(ndim);
+  // VECTOR<double> d_kvec(ndim);
+
+  // for(uint k = 0; k < vol; k++)
+  // {
+  //   const uint i = 0;
+
+  //   lat.SiteCoordinates(kvec, k);
+
+  //   phi_k(k, i) = 0;
+
+  //   for(uint x = 0; x < vol; x++)
+  //   {
+  //     lat.SiteCoordinates(xvec, x);
+
+  //     double phase = 0;
+  //     for(uint mu = 0; mu < ndim; mu++)
+  //       phase += 2.0 * M_PI * (double)kvec[mu] * (double)xvec[mu] / (double)lat.LatticeSize(mu);
+
+  //     phi_k(k, i) += phi_x(x, i) * exp(I * phase) / sqrt(vol);
+  //   }
+  // }
+
+  // // Momentum space action
+  // double action_k = 0;
+  // for(uint k = 0; k < vol; k++)
+  // {
+  //   const uint i = 0;
+
+  //   double abs_phi = std::abs(phi_k(k, i));
+
+  //   lat.SiteCoordinates(kvec, k);
+
+  //   for(uint mu = 0; mu < ndim; mu++)
+  //     d_kvec[mu] = 2.0 * M_PI * (double)kvec[mu] / (double)lat.LatticeSize(mu);
+
+  //   action_k += 0.5 * abs_phi * abs_phi * main_LatticeOp(params, d_kvec, eps0);
+  // }
+
+  // cout << "K SPACE ACTION: " << action_k << endl;
+
+  // // Coordinate space action
+  // double action_x = ScalarModel::Action(hmc_params, phi_x);
+
+  // cout << "X SPACE ACTION: " << action_x << endl;
+  // cout << "DIFF: " << action_x - action_k << endl;
+
+  // exit(0);
 
   //t_complex eps = 0.133;
   //VECTOR<double> ppp(3);
