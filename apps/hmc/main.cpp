@@ -261,6 +261,65 @@ int main(int argc, char **argv)
   RealScalarFieldN phi_field_1(lat, n);
   RealScalarFieldN phi_force(lat, n);
 
+  // // Testting HMC force
+  // for(uint x = 0; x < vol; x++)
+  // {
+  //   for(uint i = 0; i < n; i++)
+  //   {
+  //     phi_field_0(x, i) = rand_double(-0.1, 0.1);
+  //     phi_field_1(x, i) = phi_field_0(x, i);
+  //   }
+  // }
+
+  // FILE *f_tmp1 = pDataDir.OpenFile("phi.txt", "w");
+
+  // double act0 = ScalarModel::Action(params, phi_field_0) / (double)(vol * n);
+  // ScalarModel::HMCforce(params, phi_field_0, phi_force);
+
+  // for(uint i = 0; i < vol* n; i++)
+  //   SAFE_FPRINTF(f_tmp1, "%2.15le\t%2.15le\n", phi_field_0[i], phi_force[i]);
+
+  // cout << "ACTION: " << act0 << endl;
+
+  // fclose(f_tmp1);
+
+  // double eps = 1e-2;
+  // for(uint k = 3; k < 10; k++)
+  // {
+  //   eps = eps / 10.0;
+
+  //   double max_diff = 0;
+  //   for(uint x = 0; x < vol; x++)
+  //   {
+  //     for(uint i = 0; i < n; i++)
+  //     {
+  //       phi_field_1(x, i) = phi_field_0(x, i) + eps;
+  //       double act1 = ScalarModel::Action(params, phi_field_1) / (double)(vol * n);
+  //       phi_field_1(x, i) = phi_field_0(x, i) + 2.0 * eps;
+  //       double act2 = ScalarModel::Action(params, phi_field_1) / (double)(vol * n);
+  //       phi_field_1(x, i) = phi_field_0(x, i);
+
+  //       //double expected = -(act2 - 4.0 * act1 + 3.0 * act0) / (2.0 * eps);
+  //       double expected = (act1 - act0) / (eps);
+  //       double diff = std::abs(phi_force(x, i)/(double)(vol * n) - expected);
+
+  //       if (diff > max_diff)
+  //         max_diff = diff;
+
+  //       //cout << act1 << ", " << act0 << ", " << act1 - act0 << ", " << expected << endl;
+
+  //       // if (std::abs(phi_force(x, i) - expected) > 10.0 * eps)
+  //       // {
+  //       //   cout << "PANIC NOT EXPECTED FORCE X I: " << phi_force(x, i) << ", " <<  std::abs(phi_force(x, i) - expected) << ", " << x << ", " << i << endl;
+  //       // }
+  //     }
+  //   }
+
+  //   cout << eps << ", " << max_diff << endl;
+  // }
+
+  // exit(0);
+
   switch(start_type)
   {
     case START_CONFIGURATION_ZERO:

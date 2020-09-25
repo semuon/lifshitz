@@ -3,6 +3,9 @@
 
 void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_params, const int ndim, tScalarModelParams &phys_params)
 {
+  // NOT IMPLEMENTED
+  ASSERT(false);
+
   phys_params.invM2 = 2.0 * lattice_params.k2;
   phys_params.Z = 2.0 * lattice_params.k1 - 8.0 * lattice_params.k2;
   phys_params.m2 = 2.0 + 4.0 * ndim * lattice_params.k2 - 4.0 * ndim * lattice_params.k1 - 4.0 * lattice_params.lambda;
@@ -120,7 +123,7 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
   pGlobalProfiler.StartTimer("HMC Force");
 
   double m2 = params.m2;
-  double invM2 = (params.invM2 + params.Z / 12.0);
+  double invM2 = params.invM2;
   double Z = params.Z;
   double lambdaN = params.lambdaN;
   double n = params.N;
@@ -139,7 +142,7 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
   {
     for(uint x = 0; x < vol; x++)
     {
-      force(x, i) = (m2 + 2.0 * ndim * Z + 6.0 * ndim * invM2) * phi(x, i);
+      force(x, i) = (m2 + invM2 * 4.0 * (double)(ndim * ndim) + Z * 5.0 * (double)ndim / 2.0) * phi(x, i);
 
       for(int mu = 0; mu < ndim; mu++)
       {
@@ -148,8 +151,20 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
         uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
         uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
 
-        force(x, i) += invM2 * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i));
-        force(x, i) += (-Z - 4.0 * invM2) * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
+        for(int nu = 0; nu < ndim; nu++)
+        {
+          uint xmu_fwd_nu_fwd = lat.SiteIndexForward(xmu_fwd, nu);
+          uint xmu_fwd_nu_bwd = lat.SiteIndexBackward(xmu_fwd, nu);
+          uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
+          uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
+
+          force(x, i) += invM2 * (phi(xmu_fwd_nu_fwd, i) + phi(xmu_fwd_nu_bwd, i) + phi(xmu_bwd_nu_fwd, i) + phi(xmu_bwd_nu_bwd, i));
+        }
+
+        force(x, i) -= 4.0 * (double)ndim * invM2 * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
+
+        force(x, i) -= Z * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
+        force(x, i) += (Z / 12.0) * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i) - 4.0 * phi(xmu_fwd, i) - 4.0 * phi(xmu_bwd, i));
       }
     }
   }
