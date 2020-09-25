@@ -49,7 +49,7 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   pGlobalProfiler.StartTimer("Action");
 
   double m2 = params.m2;
-  double invM2 = (params.invM2 + params.Z / 12.0);
+  double invM2 = params.invM2;
   double Z = params.Z;
   double lambdaN = params.lambdaN;
   double n = params.N;
@@ -69,7 +69,7 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   {
     for(uint x = 0; x < vol; x++)
     {
-      res += (m2 + 2.0 * ndim * Z + 6.0 * ndim * invM2) * phi(x, i) * phi(x, i) / 2.0;
+      res += (m2 + invM2 * 4.0 * (double)(ndim * ndim) + Z * 5.0 * (double)ndim / 2.0) * phi(x, i) * phi(x, i);
 
       for(int mu = 0; mu < ndim; mu++)
       {
@@ -78,11 +78,25 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
         uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
         uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
 
-        res += phi(x, i) * invM2 * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i)) / 2.0;
-        res += phi(x, i) * (-Z - 4.0 * invM2) * (phi(xmu_fwd, i) + phi(xmu_bwd, i)) / 2.0;
+        for(int nu = 0; nu < ndim; nu++)
+        {
+          uint xmu_fwd_nu_fwd = lat.SiteIndexForward(xmu_fwd, nu);
+          uint xmu_fwd_nu_bwd = lat.SiteIndexBackward(xmu_fwd, nu);
+          uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
+          uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
+
+          res += phi(x, i) * invM2 * (phi(xmu_fwd_nu_fwd, i) + phi(xmu_fwd_nu_bwd, i) + phi(xmu_bwd_nu_fwd, i) + phi(xmu_bwd_nu_bwd, i));
+        }
+
+        res -= phi(x, i) * 4.0 * (double)ndim * invM2 * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
+
+        res -= phi(x, i) * Z * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
+        res += phi(x, i) * (Z / 12.0) * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i) - 4.0 * phi(xmu_fwd, i) - 4.0 * phi(xmu_bwd, i));
       }
     }
   }
+
+  res *= 1.0 /2.0;
 
   // Interaction terms
   for(uint x = 0; x < vol; x++)
