@@ -155,10 +155,19 @@ int main(int argc, char **argv)
 
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_read_attr);
 
-  FILE *f_corr = NULL;
+  VECTOR<FILE *> f_corrs(ndim);
+  for(uint mu = 0; mu < ndim; mu++)
+    f_corrs[mu] = NULL;
 
   if (pIsComputeCorr)
-    f_corr = pDataDir.OpenFile(fname_corr, f_bin_write_attr);
+  {
+    for(uint mu = 0; mu < ndim; mu++)
+    {
+      std::string fname_corr_mu = TO_STRING(mu) + "." + fname_corr;
+
+      f_corrs[mu] = pDataDir.OpenFile(fname_corr_mu, f_bin_write_attr);
+    }
+  }
 
   RealScalarFieldN phi_field(lat, n);
 
@@ -190,9 +199,12 @@ int main(int argc, char **argv)
 
       if (pIsComputeCorr)
       {
-        ScalarModel::CorrelationFunction(phi_field, corr_vol_avg, corr);
+        for(uint mu = 0; mu < ndim; mu++)
+        {
+          ScalarModel::CorrelationFunction(phi_field, corr_vol_avg, mu, corr);
 
-        Formats::DumpBinary(f_corr, corr);
+          Formats::DumpBinary(f_corrs[mu], corr);
+        }
       }
     }
 
@@ -201,10 +213,11 @@ int main(int argc, char **argv)
     pStdLogs.Write("\nCALC COMPLETED\n\n");
   }
 
-  fclose(f_confs);
-
   if (pIsComputeCorr)
-    fclose(f_corr);
+  {
+    for(uint mu = 0; mu < ndim; mu++)
+      fclose(f_corrs[mu]);
+  }
 
   int64_t end = Utils::GetTimeMs64();
 

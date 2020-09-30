@@ -13,17 +13,15 @@ void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_para
   phys_params.kappa = 6.0 * lattice_params.kappa;
 }
 
-void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vol_avg, VECTOR<double> &corr)
+void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr)
 {
   const Lattice &lat = phi.GetLattice();
-  const uint ls = corr.size();
 
-  uint ndim = lat.Dim();
   uint vol = lat.Volume();
   uint n = phi.N();
+  uint ls = lat.LatticeSize(mu);
 
-  for(uint mu = 0; mu < ndim; mu++)
-    ASSERT(lat.LatticeSize(mu) >= ls);
+  corr.resize(ls);
 
   for(uint i = 0; i < ls; i++)
     corr[i] = 0;
@@ -31,7 +29,6 @@ void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vo
   uint xmax = (vol_avg) ? vol : 1;
 
   for(uint x = 0; x < xmax; x++)
-  for(uint mu = 0; mu < ndim; mu++)
   {
     uint x1 = x;
 
@@ -39,7 +36,7 @@ void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vo
     {
       for(uint i = 0; i < n; i++)
       {
-        corr[s] += phi(x, i) * phi(x1, i) / (n * xmax * ndim);
+        corr[s] += phi(x, i) * phi(x1, i) / (n * xmax);
       }
 
       x1 = lat.SiteIndexForward(x1, mu);
