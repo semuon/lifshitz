@@ -95,7 +95,7 @@ vpath %.cpp $(SRC_DIRS)
 # targets
 ###############################################################################
 
-all: saddles hmc
+all: calc hmc largen
 
 mkdirs:
 	mkdir -p $(OBJ_DIR)
