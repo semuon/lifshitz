@@ -13,6 +13,8 @@
 #include <time.h>
 #include <mpi_module.h>
 
+#include "finite_diff.h"
+
 // Don't use entire namespace std
 using std::cout;
 using std::endl;
@@ -514,7 +516,7 @@ void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct
 
     for(uint i = 0; i < Lmin; i++)
     {
-      corr[i] += exp(I * (double)i * p[0]) / (latop * (double)vol);
+      corr[i] += exp(t_complex(0, 1) * (double)i * p[0]) / (latop * (double)vol);
 
       if ( !main_IsFinite(corr[i]) )
       {
@@ -680,6 +682,20 @@ template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const P
 
 int main(int argc, char **argv)
 {
+  auto ptr = FiniteDifference::MakeOneSidedDiff(2, 4);
+
+  auto aaa = ptr->GetStencil();
+
+  for(uint i = 0; i < aaa.size(); i++)
+  {
+    VECTOR<int> &offset = std::get<0>(aaa[i]);
+    rational<int> coef = std::get<1>(aaa[i]);
+
+    pStdLogs.Write("%d: %d/%d\n", offset[0], coef.numerator(), coef.denominator());
+  }
+
+  return 0;
+
   const string f_bin_attr = "wb";
   const string f_txt_attr = "w";
 
