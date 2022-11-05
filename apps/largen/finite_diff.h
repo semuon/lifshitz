@@ -28,14 +28,14 @@ public:
   {
     if (ndim != rhs.ndim) return false;
     bool res = true;
-    for(uint i = 0; i < ndim; i++)  res = res && xs[i] == rhs[i];
+    for(uint i = 0; i < ndim; i++)  res = res && xs[i] == rhs.GetComponent(i);
     return res;
   }
 
-  AuxVector<T>& operator=(const AuxVector<T> &rhs)  { ASSERT(ndim == rhs.ndim); for(uint i = 0; i < ndim; i++) xs[i] = rhs.xs[i]; }
-  AuxVector<T>& operator+=(const AuxVector<T>& rhs) { ASSERT(ndim == rhs.ndim); for(uint i = 0; i < ndim; i++) xs[i] += rhs.xs[i]; }
-  AuxVector<T>& operator-=(const AuxVector<T>& rhs) { ASSERT(ndim == rhs.ndim); for(uint i = 0; i < ndim; i++) xs[i] -= rhs.xs[i]; }  
-  AuxVector<T>& operator*=(const T& rhs)            {                           for(uint i = 0; i < ndim; i++) xs[i] *= rhs; }
+  AuxVector<T>& operator=(const AuxVector<T> &rhs)  { ASSERT(ndim == rhs.ndim); for(uint i = 0; i < ndim; i++) xs[i] = rhs.GetComponent(i); return *this; }
+  AuxVector<T>& operator+=(const AuxVector<T>& rhs) { ASSERT(ndim == rhs.ndim); for(uint i = 0; i < ndim; i++) xs[i] += rhs.GetComponent(i); return *this; }
+  AuxVector<T>& operator-=(const AuxVector<T>& rhs) { ASSERT(ndim == rhs.ndim); for(uint i = 0; i < ndim; i++) xs[i] -= rhs.GetComponent(i); return *this; }  
+  AuxVector<T>& operator*=(const T& rhs)            {                           for(uint i = 0; i < ndim; i++) xs[i] *= rhs; return *this; }
 };
 
 template <typename xT, typename coefT> class StencilPoint
@@ -113,6 +113,7 @@ public:
   FiniteDifference(uint ndim) : dim(ndim) {}
 
   uint Dim() const { return dim; }
+  uint NumPoints() const { return stencil.size(); }
 
   VECTOR<StencilPoint<int, T>> GetStencil() const { return stencil; }
 
@@ -127,6 +128,55 @@ public:
 
       pStdLogs.Write("% -d/%d\n", stencil[i].coef.numerator(), stencil[i].coef.denominator());
     }
+  }
+
+  static SHARED_PTR<FiniteDifference<T>> ComposeOperators(
+    const FiniteDifference<T> &A, const FiniteDifference<T> &B)
+  {
+    ASSERT(A.dim == B.dim);
+
+    const uint dim = A.dim;
+    SHARED_PTR<FiniteDifference<T>> res_ptr = MAKE_SHARED<FiniteDifference<T>>(dim);
+    FiniteDifference<T> &res = *res_ptr;
+
+    const uint nptA = A.NumPoints();
+    const uint nptB = B.NumPoints();
+
+    AuxVector<int> aux(dim);
+    rational<T> c;
+
+    for(uint i = 0 ; i < nptA; i++)
+    for(uint j = 0 ; j < nptB; j++)
+    {
+      const StencilPoint<int, T> &ptA = A.stencil[i];
+      const StencilPoint<int, T> &ptB = B.stencil[j];
+
+      aux = ptA.offset;
+      aux += ptB.offset;
+      c = ptA.coef * ptB.coef;
+
+      StencilPoint<int, T> *_ptr = nullptr;
+      for(uint k = 0; k < res.NumPoints(); k++)
+      {
+        if (res.stencil[k].offset == aux)
+        {
+          _ptr = &res.stencil[k];
+          break;
+        }
+      }
+
+      if (_ptr != nullptr)
+      {
+        _ptr->coef += c;
+      }
+      else
+      {
+        StencilPoint<int, T> new_pt(aux, c);
+        res.stencil.push_back(new_pt);
+      }
+    }
+
+    return res_ptr;
   }
 
   static SHARED_PTR<FiniteDifference<T>> MakeOneSidedDiff(uint order, int n_points)

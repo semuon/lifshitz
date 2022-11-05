@@ -684,17 +684,13 @@ int main(int argc, char **argv)
 {
   auto ptr = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
 
-  ptr->PrintStencil();
-  auto aaa = ptr->GetStencil();
-  
+  //ptr->PrintStencil();
 
-  for(uint i = 0; i < aaa.size(); i++)
-  {
-    auto offset = aaa[i].offset;
-    auto coef = aaa[i].coef;
+  auto x1 = FiniteDifference<int>::MakeOneSidedDiff(1, 3);
+  auto x2 = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
+  auto x3 = FiniteDifference<int>::ComposeOperators(*x1, *x2);
 
-    pStdLogs.Write("%d: %d/%d\n", offset[0], coef.numerator(), coef.denominator());
-  }
+  x3->PrintStencil();
 
   return 0;
 
