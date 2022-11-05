@@ -709,7 +709,7 @@ int main(int argc, char **argv)
   uint ndim = pDim;
 
   Lattice lat(latdims, ndim, nc, nd);
-  uint vol = lat.Volume();
+  //uint vol = lat.Volume();
 
   uint Lmin = lat.LatticeSize(0);
   for(uint i = 1; i < ndim; i++)
@@ -734,9 +734,9 @@ int main(int argc, char **argv)
   int n_iters = pNiters;
   int n_tries = pNtries;
   double tolerance = pTolerance;
-  double relax_alpha = pRelaxAlpha;
-  double random_range = pRandomRange;
-  tNewtonMethod method = pMethod;
+  //double relax_alpha = pRelaxAlpha;
+  //double random_range = pRandomRange;
+  //tNewtonMethod method = pMethod;
 
   //t_complex epsilon0;
   //t_complex epsilon1;
@@ -873,7 +873,7 @@ int main(int argc, char **argv)
     //bool is_converged_cont = main_NewtonContinuum(epsilon_cont, iters_cont, params, epsilon0.real(), method, tolerance, n_iters);
     bool is_converged_cont = main_ContinuumBisection(epsilon_cont, iters_cont, params, tolerance, n_iters);
 
-    t_complex action = 0;
+    //t_complex action = 0;
 
     if (is_converged)
     {
