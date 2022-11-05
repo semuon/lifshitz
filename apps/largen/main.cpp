@@ -682,16 +682,18 @@ template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const P
 
 int main(int argc, char **argv)
 {
-  auto ptr = FiniteDifference<long long>::MakeOneSidedDiff(1, -4);
+  auto ptr = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
 
+  ptr->PrintStencil();
   auto aaa = ptr->GetStencil();
+  
 
   for(uint i = 0; i < aaa.size(); i++)
   {
     auto offset = aaa[i].offset;
     auto coef = aaa[i].coef;
 
-    pStdLogs.Write("%d: %lld/%lld\n", offset[0], coef.numerator(), coef.denominator());
+    pStdLogs.Write("%d: %d/%d\n", offset[0], coef.numerator(), coef.denominator());
   }
 
   return 0;

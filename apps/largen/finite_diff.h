@@ -110,11 +110,24 @@ private:
   }
 
 public:
-  FiniteDifference(uint ndim) {}
+  FiniteDifference(uint ndim) : dim(ndim) {}
 
   uint Dim() const { return dim; }
 
   VECTOR<StencilPoint<int, T>> GetStencil() const { return stencil; }
+
+  void PrintStencil()
+  {
+    for(uint i = 0; i < stencil.size(); i++)
+    {
+      pStdLogs.Write("(");
+      for(uint j = 0; j + 1 < dim; j++)
+        pStdLogs.Write("% -d, ", stencil[i].offset[j]);
+      pStdLogs.Write("% -d):\t", stencil[i].offset[dim - 1]);
+
+      pStdLogs.Write("% -d/%d\n", stencil[i].coef.numerator(), stencil[i].coef.denominator());
+    }
+  }
 
   static SHARED_PTR<FiniteDifference<T>> MakeOneSidedDiff(uint order, int n_points)
   {
