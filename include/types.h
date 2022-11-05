@@ -7,7 +7,7 @@
 typedef std::complex<double> t_complex;
 typedef std::complex<float> t_complex_float;
 
-#define I t_complex(0.0, 1.0)
+//#define I t_complex(0.0, 1.0)
 
 #define lapack_complex_float std::complex<float>
 #define lapack_complex_double std::complex<double>

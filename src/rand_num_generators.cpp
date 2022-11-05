@@ -115,7 +115,7 @@ t_complex rand_gauss_complex(t_complex offset, double sigma)
 {
  double r[2];
  ranlxd(r, 2);
- return (offset + sigma*sqrt(-log(r[0]))*exp(2.0*M_PI*I*r[1]));
+ return (offset + sigma*sqrt(-log(r[0]))*exp(2.0*M_PI*t_complex(0, 1)*r[1]));
 }
 
 void       rand_gauss_double_array(    double *A, int n, double offset, double sigma)   //Same as rand_gauss_double, but fills array of n elements with random numbers

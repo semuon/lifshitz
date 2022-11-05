@@ -164,7 +164,7 @@ void Linalg::Arnoldi(MatrixByVector F, void *args, int n, VECTOR<t_complex> &eva
 
   // we can use already allocated array v to store eigenvectors if
   // we are not interested in Schur basis. Read neupd.f for details 
-  sigma = 0.0 + I * 0.0;
+  sigma = 0.0 + t_complex(0, 1) * 0.0;
 
   // Calling neupd to finally calculate the eigenspectrum
   zneupd_(&rvec, &howmny, select.data(), d.data(), v.data(), &ldz, &sigma, workev.data(), &bmat, &n, which,
