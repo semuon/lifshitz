@@ -40,33 +40,64 @@ template <> bool main_IsFinite<t_complex>(const t_complex value)
 
 template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const T epsilon)
 {
+  pStdLogs.Write("NOT IMPLEMENTED!!!!");
+  THROW_EXCEPTION(std::invalid_argument, "This is not implemented");
+
+  return 0;
+}
+
+template <> t_complex main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const t_complex epsilon)
+{
   uint ndim = p.size();
 
   double m2 = params.m2;
   double invM2 = params.invM2;
   double Z = params.Z;
 
-  T val = 0;
+  //pStdLogs.Write("IN COMPLEX");
 
-  T sum_cos_k = 0;
-  T sum_cos_2k = 0;
-  T nd = (T)((double)ndim);
+  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, 2);
+  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
+  auto lap = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
+  auto lap2 = FiniteDifference<int>::ComposeOperators(*lap, *lap);
 
-  for(uint i = 0; i < ndim; i++)
-  {
-    double pi = p[i];
+  //lap2->PrintStencil();
 
-    sum_cos_k += cos(pi);
-    sum_cos_2k += cos(2.0 * pi);
-
-    //val += 2.0 * (invM2 + Z / 12.0) * ( cos(2.0 * pi) - 4.0 * cos(pi) + 3.0 ) - 
-    //       2.0 * Z * ( cos(pi) - 1.0 );
-  }
-
-  val += invM2 * ( 4.0 * sum_cos_k * sum_cos_k - 8.0 * nd * sum_cos_k + 4.0 * nd * nd );
-  val -= Z * ( 2.0 * (sum_cos_k - nd) - (1.0 / 6.0) * (sum_cos_2k - 4.0 * sum_cos_k + 3.0 * nd) );
+  t_complex val = invM2 * lap2->Eval(p) - Z * lap->Eval(p);
 
   val += m2 + 2.0 * epsilon;
+
+  return val;
+}
+
+template <> double main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const double epsilon)
+{
+  uint ndim = p.size();
+
+  double m2 = params.m2;
+  double invM2 = params.invM2;
+  double Z = params.Z;
+
+  //pStdLogs.Write("IN DOUBLE");
+
+  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, 2);
+  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
+  auto lap = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
+  auto lap2 = FiniteDifference<int>::ComposeOperators(*lap, *lap);
+
+  //lap2->PrintStencil();
+
+  t_complex c_val = invM2 * lap2->Eval(p) - Z * lap->Eval(p);
+
+  // check that the result is real
+  if(!(std::abs(c_val.imag()) < 1e-13))
+  {
+    pStdLogs.Write("main_LatticeOp<doule>: stencil operator is not real\n\n");
+    pStdLogs.Write("%2.15le\n\n", c_val.imag());
+    THROW_EXCEPTION(std::invalid_argument, "main_LatticeOp<doule>: stencil operator is not real");
+  }
+
+  double val = c_val.real() + m2 + 2.0 * epsilon;
 
   return val;
 }
@@ -255,14 +286,60 @@ void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, cons
   double invM2 = params.invM2;
   double Z = params.Z;
 
-  double K1 = 4.0 * invM2;
-  double K2 = -8.0 * ((double)ndim * invM2 + Z / 3.0);
-  double K3 = Z / 6.0;
-  double K4 = 4.0 * (double)ndim * (double)ndim * invM2 + 5.0 * (double)ndim * Z / 2.0;
+  // double K1 = 4.0 * invM2;
+  // double K2 = -8.0 * ((double)ndim * invM2 + Z / 3.0);
+  // double K3 = Z / 6.0;
+  // double K4 = 4.0 * (double)ndim * (double)ndim * invM2 + 5.0 * (double)ndim * Z / 2.0;
 
-  res[0] = K1 * (cos(p) + 2.0) * (cos(p) + 2.0) + K2 * (cos(p) + 2.0) + K3 * (cos(2.0 * p) + 2.0) + K4;
-  res[1] = -2.0 * K1 * (cos(p) + 2.0) * sin(p) - K2 * sin(p) - 2.0 * K3 * sin(2.0 * p);
-  res[2] = 2.0 * K1 * sin(p) * sin(p) - 2.0 * K1 * (cos(p) + 2.0) * cos(p) - K2 * cos(p) - 4.0 * K3 * cos(2.0 * p);
+  // res[0] = K1 * (cos(p) + 2.0) * (cos(p) + 2.0) + K2 * (cos(p) + 2.0) + K3 * (cos(2.0 * p) + 2.0) + K4;
+  // res[1] = -2.0 * K1 * (cos(p) + 2.0) * sin(p) - K2 * sin(p) - 2.0 * K3 * sin(2.0 * p);
+  // res[2] = 2.0 * K1 * sin(p) * sin(p) - 2.0 * K1 * (cos(p) + 2.0) * cos(p) - K2 * cos(p) - 4.0 * K3 * cos(2.0 * p);
+
+  VECTOR<uint> order(ndim, 0);
+  VECTOR<double> pvec(ndim, 0);
+
+  for(uint i = 0; i < pvec.size(); i++)
+    std::cout << pvec[i] << std::endl;
+
+  pvec[0] = p;
+
+  std::cout << p << std::endl;
+
+  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, 2);
+  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
+  auto lap = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
+  auto lap2 = FiniteDifference<int>::ComposeOperators(*lap, *lap);
+
+  //lap2->PrintStencil();
+
+  t_complex val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
+  if(!(std::abs(val.imag()) < 1e-13))
+  {
+    pStdLogs.Write("main_LatticeDispersionDerivatives: stencil operator is not real\n\n");
+    pStdLogs.Write("%2.15le\n\n", val.imag());
+    THROW_EXCEPTION(std::invalid_argument, "main_LatticeDispersionDerivatives: stencil operator is not real");
+  }
+  res[0] = val.real();
+
+  order[0] = 1;
+  val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
+  if(!(std::abs(val.imag()) < 1e-13))
+  {
+    pStdLogs.Write("main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real\n\n");
+    pStdLogs.Write("%2.15le\n\n", val.imag());
+    THROW_EXCEPTION(std::invalid_argument, "main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real");
+  }
+  res[1] = val.real();
+
+  order[0] = 2;
+  val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
+  if(!(std::abs(val.imag()) < 1e-13))
+  {
+    pStdLogs.Write("main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real\n\n");
+    pStdLogs.Write("%2.15le\n\n", val.imag());
+    THROW_EXCEPTION(std::invalid_argument, "main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real");
+  }
+  res[2] = val.real();
 
   //double K1 = 1.0 / (M * M) + Z / 12.0;
   //double K2 = -Z;
@@ -682,34 +759,34 @@ template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const P
 
 int main(int argc, char **argv)
 {
-  auto x0 = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
-  x0->PrintStencil();
+  // auto x0 = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
+  // x0->PrintStencil();
 
-  pStdLogs.Write("\n");
+  // pStdLogs.Write("\n");
 
-  auto x1 = FiniteDifference<int>::MakeOneSidedDiff(1, 3);
-  auto x2 = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
-  auto x3 = FiniteDifference<int>::ComposeOperators(*x1, *x2);
+  // auto x1 = FiniteDifference<int>::MakeOneSidedDiff(1, 3);
+  // auto x2 = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
+  // auto x3 = FiniteDifference<int>::ComposeOperators(*x1, *x2);
 
-  auto x4 = FiniteDifference<int>::MakeLaplacian(2, *x1, *x2);
+  // auto x4 = FiniteDifference<int>::MakeLaplacian(2, *x1, *x2);
 
-  x3->PrintStencil();
-  pStdLogs.Write("\n");
+  // x3->PrintStencil();
+  // pStdLogs.Write("\n");
 
-  x4->PrintStencil();
-  pStdLogs.Write("\n");
+  // x4->PrintStencil();
+  // pStdLogs.Write("\n");
 
-  VECTOR<double> p(2);
-  p[0] = 0.133;
-  p[1] = -2.14442 * M_PI;
+  // VECTOR<double> p(2);
+  // p[0] = 0.133;
+  // p[1] = -2.14442 * M_PI;
 
-  //auto lap = FiniteDifference<int>::Eval(p, *x4);
-  auto lap = x4->Eval(p);
+  // //auto lap = FiniteDifference<int>::Eval(p, *x4);
+  // auto lap = x4->Eval(p);
 
-  x4->PrintStencil();
-  pStdLogs.Write("%2.15le\t%2.15le\n", lap.real(), lap.imag());
+  // x4->PrintStencil();
+  // pStdLogs.Write("%2.15le\t%2.15le\n", lap.real(), lap.imag());
 
-  return 0;
+  // return 0;
 
   const string f_bin_attr = "wb";
   const string f_txt_attr = "w";

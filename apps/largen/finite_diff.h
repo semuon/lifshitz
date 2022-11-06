@@ -264,6 +264,36 @@ public:
     return res_ptr;
   }
 
+  static t_complex EvalDerivative(const VECTOR<uint> &order, const VECTOR<double> &p, const FiniteDifference<T> &A)
+  {
+    ASSERT(p.size() == A.Dim());
+    ASSERT(order.size() == A.Dim());
+
+    t_complex res = 0;
+
+    uint dim = A.Dim();
+    auto &stencil = A.stencil;
+
+    for(uint i = 0; i < stencil.size(); i++)
+    {
+      auto &offset = stencil[i].offset;
+      t_complex coef = boost::rational_cast<double>(stencil[i].coef);
+
+      double phase = 0;
+      for(uint j = 0; j < dim; j++)
+      {
+        phase += p[j] * offset.GetComponent(j);
+        
+        if (order[j] > 0)
+          coef *= pow(t_complex(0, 1) * (double)offset.GetComponent(j), order[j]);
+      }
+
+      res += coef * exp(t_complex(0, 1) * phase);
+    }
+
+    return res;
+  }
+
   static t_complex Eval(const VECTOR<double> &p, const FiniteDifference<T> &A)
   {
     ASSERT(p.size() == A.Dim());
@@ -286,6 +316,11 @@ public:
     }
 
     return res;
+  }
+
+  t_complex EvalDerivative(const VECTOR<uint> &order, const VECTOR<double> &p)
+  {
+    return FiniteDifference<T>::EvalDerivative(order, p, *this);
   }
 
   t_complex Eval(const VECTOR<double> &p) const
