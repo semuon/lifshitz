@@ -263,6 +263,35 @@ public:
 
     return res_ptr;
   }
+
+  static t_complex Eval(const VECTOR<double> &p, const FiniteDifference<T> &A)
+  {
+    ASSERT(p.size() == A.Dim());
+
+    t_complex res = 0;
+
+    uint dim = A.Dim();
+    auto &stencil = A.stencil;
+
+    for(uint i = 0; i < stencil.size(); i++)
+    {
+      auto &offset = stencil[i].offset;
+      auto coef = stencil[i].coef;
+
+      double phase = 0;
+      for(uint j = 0; j < dim; j++)
+        phase += p[j] * offset.GetComponent(j);
+
+      res += boost::rational_cast<double>(coef) * exp(t_complex(0, 1) * phase);
+    }
+
+    return res;
+  }
+
+  t_complex Eval(const VECTOR<double> &p) const
+  {
+    return FiniteDifference<T>::Eval(p, *this);
+  }
 };
 
 #endif /* FINITE_DIFF_H_ */

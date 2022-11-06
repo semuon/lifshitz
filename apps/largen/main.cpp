@@ -699,6 +699,16 @@ int main(int argc, char **argv)
   x4->PrintStencil();
   pStdLogs.Write("\n");
 
+  VECTOR<double> p(2);
+  p[0] = 0.133;
+  p[1] = -2.14442 * M_PI;
+
+  //auto lap = FiniteDifference<int>::Eval(p, *x4);
+  auto lap = x4->Eval(p);
+
+  x4->PrintStencil();
+  pStdLogs.Write("%2.15le\t%2.15le\n", lap.real(), lap.imag());
+
   return 0;
 
   const string f_bin_attr = "wb";
