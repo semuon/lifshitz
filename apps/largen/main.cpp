@@ -682,15 +682,22 @@ template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const P
 
 int main(int argc, char **argv)
 {
-  auto ptr = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
+  auto x0 = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
+  x0->PrintStencil();
 
-  //ptr->PrintStencil();
+  pStdLogs.Write("\n");
 
   auto x1 = FiniteDifference<int>::MakeOneSidedDiff(1, 3);
   auto x2 = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
   auto x3 = FiniteDifference<int>::ComposeOperators(*x1, *x2);
 
+  auto x4 = FiniteDifference<int>::MakeLaplacian(2, *x1, *x2);
+
   x3->PrintStencil();
+  pStdLogs.Write("\n");
+
+  x4->PrintStencil();
+  pStdLogs.Write("\n");
 
   return 0;
 

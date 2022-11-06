@@ -126,7 +126,10 @@ public:
         pStdLogs.Write("% -d, ", stencil[i].offset[j]);
       pStdLogs.Write("% -d):\t", stencil[i].offset[dim - 1]);
 
-      pStdLogs.Write("% -d/%d\n", stencil[i].coef.numerator(), stencil[i].coef.denominator());
+      if (stencil[i].coef.denominator() != 1)
+        pStdLogs.Write("% -d/%d\n", stencil[i].coef.numerator(), stencil[i].coef.denominator());
+      else
+        pStdLogs.Write("% -d\n", stencil[i].coef.numerator());
     }
   }
 
@@ -214,7 +217,48 @@ public:
       StencilPoint<int, T> stencil_pt(offset, system[i][npts]);
 
       res_ptr->stencil.push_back(stencil_pt);
-      //pStdLogs.Write("%d : %d\n", system[i][npts].numerator(), system[i][npts].denominator());
+    }
+
+    return res_ptr;
+  }
+
+  static SHARED_PTR<FiniteDifference<T>> MakeLaplacian(
+    uint dim, const FiniteDifference<T> &fwd1d, const FiniteDifference<T> &bwd1d)
+  {
+    ASSERT(dim > 0);
+    ASSERT(fwd1d.Dim() == 1);
+    ASSERT(fwd1d.Dim() == bwd1d.Dim());
+
+    auto res_ptr = MAKE_SHARED<FiniteDifference<T>>(dim);
+    auto &res = *res_ptr;
+
+    auto central_ptr = FiniteDifference<T>::ComposeOperators(fwd1d, bwd1d);
+    auto &stencil1d = central_ptr->stencil;
+    uint npt1d = stencil1d.size();
+
+    AuxVector<int> aux(dim);
+
+    for(uint i = 0; i < dim * npt1d; i++)
+    {
+      const uint d = (uint)floor((double)i / npt1d);
+      const uint sidx = i % npt1d;
+
+      for(uint j = 0; j < dim; j++)
+        aux[j] = (j == d) ? stencil1d[sidx].offset[0] : 0;
+
+      bool exists = false;
+      for(uint j = 0; j < res.stencil.size(); j++)
+      {
+        if (aux == res.stencil[j].offset)
+        {
+          res.stencil[j].coef += stencil1d[sidx].coef;
+          exists = true;
+          break;
+        }
+      }
+
+      if (!exists)
+        res.stencil.emplace_back(aux, stencil1d[sidx].coef);
     }
 
     return res_ptr;
