@@ -27,8 +27,8 @@ typedef struct PhysicalParams_struct
   double Z;
   double lambda;
 
-  SHARED_PTR<FiniteDifference<int>> laplace_ptr;
-  SHARED_PTR<FiniteDifference<int>> laplace_sqr_ptr;
+  SHARED_PTR<FiniteDifference<int64_t>> laplace_ptr;
+  SHARED_PTR<FiniteDifference<int64_t>> laplace_sqr_ptr;
 } tPhysicalParams;
 
 template <typename T> bool main_IsFinite(const T value)
@@ -53,11 +53,11 @@ void main_CreateLatticeOperators(tPhysicalParams &params, const uint ndim, const
 {
   const uint op_dim = 1;
 
-  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(op_dim, n_stencil_points);
-  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(op_dim, -n_stencil_points);
+  auto fwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, n_stencil_points);
+  auto bwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, -n_stencil_points);
 
-  params.laplace_ptr = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
-  params.laplace_sqr_ptr = FiniteDifference<int>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
+  params.laplace_ptr = FiniteDifference<int64_t>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
+  params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
 }
 
 template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const T epsilon)
@@ -94,11 +94,11 @@ template <> double main_LatticeOp(const PhysicalParams_struct &params, const VEC
 
   t_complex c_val = invM2 * lap2->Eval(p) - Z * lap->Eval(p);
 
-  if (!main_IsReal(c_val))
-  {
-    pStdLogs.Write("IM: %2.15le\n", c_val.imag());
-    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeOp<doule>: stencil operator is not real");
-  }
+  // if (!main_IsReal(c_val))
+  // {
+  //   pStdLogs.Write("IM: %2.15le\n", c_val.imag());
+  //   THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeOp<doule>: stencil operator is not real");
+  // }
 
   double val = c_val.real() + m2 + 2.0 * epsilon;
 
@@ -307,29 +307,32 @@ void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, cons
   auto lap2 = params.laplace_sqr_ptr;
 
   t_complex val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
-  if (!main_IsReal(val))
-  {
-    pStdLogs.Write("IM: %2.15le\n", val.imag());
-    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: stencil operator is not real");
-  }
+  // if (!main_IsReal(val))
+  // {
+  //   pStdLogs.Write("VAL: %2.15le\t%2.15le\n", val.real(), val.imag());
+  //   pStdLogs.Write("P: %2.15le\n", p);
+  //   THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: stencil operator is not real");
+  // }
   res[0] = val.real();
 
   order[0] = 1;
   val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
-  if (!main_IsReal(val))
-  {
-    pStdLogs.Write("IM: %2.15le\n", val.imag());
-    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real");
-  }
+  // if (!main_IsReal(val))
+  // {
+  //   pStdLogs.Write("VAL: %2.15le\t%2.15le\n", val.real(), val.imag());
+  //   pStdLogs.Write("P: %2.15le\n", p);
+  //   THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real");
+  // }
   res[1] = val.real();
 
   order[0] = 2;
   val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
-  if (!main_IsReal(val))
-  {
-    pStdLogs.Write("IM: %2.15le\n", val.imag());
-    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real");
-  }
+  // if (!main_IsReal(val))
+  // {
+  //   pStdLogs.Write("VAL: %2.15le\t%2.15le\n", val.real(), val.imag());
+  //   pStdLogs.Write("P: %2.15le\n", p);
+  //   THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real");
+  // }
   res[2] = val.real();
 
   //double K1 = 1.0 / (M * M) + Z / 12.0;
