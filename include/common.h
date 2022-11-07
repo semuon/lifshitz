@@ -97,6 +97,16 @@ public:
 #define THROW_EXCEPTION(exception, msg) \
     throw exception("[" + std::string(__FILE__) + ":" + TO_STRING(__LINE__) + "]: " + msg);
 
+#define THROW_EXCEPTION_VERB(exception, msg)               \
+  {                                                        \
+    std::string __exception_msg = "[" + std::string(__FILE__) + ":" + TO_STRING(__LINE__) + "]: " + msg; \
+    std::string __log_msg = std::string("EXCEPTION THROWN: ") +__exception_msg; \
+    std::string __error_log_msg = std::string("EXCEPTION THROWN: ") + msg; \
+    pStdLogs.Write(__log_msg.c_str()); \
+    WRITE_ERROR(__error_log_msg.c_str());               \
+    throw exception(__exception_msg);                       \
+  }
+
 #define ASSERT(x)                                       \
   if (!(x))                                             \
   {                                                     \
