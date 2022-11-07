@@ -26,6 +26,9 @@ typedef struct PhysicalParams_struct
   double invM2;
   double Z;
   double lambda;
+
+  SHARED_PTR<FiniteDifference<int>> laplace_ptr;
+  SHARED_PTR<FiniteDifference<int>> laplace_sqr_ptr;
 } tPhysicalParams;
 
 template <typename T> bool main_IsFinite(const T value)
@@ -38,30 +41,40 @@ template <> bool main_IsFinite<t_complex>(const t_complex value)
   return std::isfinite(value.real()) && std::isfinite(value.imag());
 }
 
+bool main_IsReal(const t_complex value)
+{
+  const double c_treshold = 1e-11;
+  const double im = value.imag();
+
+  return std::isfinite(im) && (std::abs(im) < c_treshold);
+}
+
+void main_CreateLatticeOperators(tPhysicalParams &params, const uint ndim, const int n_stencil_points)
+{
+  const uint op_dim = 1;
+
+  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(op_dim, n_stencil_points);
+  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(op_dim, -n_stencil_points);
+
+  params.laplace_ptr = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
+  params.laplace_sqr_ptr = FiniteDifference<int>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
+}
+
 template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const T epsilon)
 {
-  pStdLogs.Write("NOT IMPLEMENTED!!!!");
-  THROW_EXCEPTION(std::invalid_argument, "This is not implemented");
+  THROW_EXCEPTION_VERB(std::invalid_argument, "METHOD IS NOT IMPLEMENTED");
 
   return 0;
 }
 
 template <> t_complex main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const t_complex epsilon)
 {
-  uint ndim = p.size();
-
   double m2 = params.m2;
   double invM2 = params.invM2;
   double Z = params.Z;
 
-  //pStdLogs.Write("IN COMPLEX");
-
-  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, 2);
-  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
-  auto lap = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
-  auto lap2 = FiniteDifference<int>::ComposeOperators(*lap, *lap);
-
-  //lap2->PrintStencil();
+  auto lap = params.laplace_ptr;
+  auto lap2 = params.laplace_sqr_ptr;
 
   t_complex val = invM2 * lap2->Eval(p) - Z * lap->Eval(p);
 
@@ -72,29 +85,19 @@ template <> t_complex main_LatticeOp(const PhysicalParams_struct &params, const 
 
 template <> double main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const double epsilon)
 {
-  uint ndim = p.size();
-
   double m2 = params.m2;
   double invM2 = params.invM2;
   double Z = params.Z;
 
-  //pStdLogs.Write("IN DOUBLE");
-
-  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, 2);
-  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
-  auto lap = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
-  auto lap2 = FiniteDifference<int>::ComposeOperators(*lap, *lap);
-
-  //lap2->PrintStencil();
+  auto lap = params.laplace_ptr;
+  auto lap2 = params.laplace_sqr_ptr;
 
   t_complex c_val = invM2 * lap2->Eval(p) - Z * lap->Eval(p);
 
-  // check that the result is real
-  if(!(std::abs(c_val.imag()) < 1e-13))
+  if (!main_IsReal(c_val))
   {
-    pStdLogs.Write("main_LatticeOp<doule>: stencil operator is not real\n\n");
-    pStdLogs.Write("%2.15le\n\n", c_val.imag());
-    THROW_EXCEPTION(std::invalid_argument, "main_LatticeOp<doule>: stencil operator is not real");
+    pStdLogs.Write("IM: %2.15le\n", c_val.imag());
+    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeOp<doule>: stencil operator is not real");
   }
 
   double val = c_val.real() + m2 + 2.0 * epsilon;
@@ -298,46 +301,34 @@ void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, cons
   VECTOR<uint> order(ndim, 0);
   VECTOR<double> pvec(ndim, 0);
 
-  for(uint i = 0; i < pvec.size(); i++)
-    std::cout << pvec[i] << std::endl;
-
   pvec[0] = p;
 
-  std::cout << p << std::endl;
-
-  auto fwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, 2);
-  auto bwd1d = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
-  auto lap = FiniteDifference<int>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
-  auto lap2 = FiniteDifference<int>::ComposeOperators(*lap, *lap);
-
-  //lap2->PrintStencil();
+  auto lap = params.laplace_ptr;
+  auto lap2 = params.laplace_sqr_ptr;
 
   t_complex val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
-  if(!(std::abs(val.imag()) < 1e-13))
+  if (!main_IsReal(val))
   {
-    pStdLogs.Write("main_LatticeDispersionDerivatives: stencil operator is not real\n\n");
-    pStdLogs.Write("%2.15le\n\n", val.imag());
-    THROW_EXCEPTION(std::invalid_argument, "main_LatticeDispersionDerivatives: stencil operator is not real");
+    pStdLogs.Write("IM: %2.15le\n", val.imag());
+    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: stencil operator is not real");
   }
   res[0] = val.real();
 
   order[0] = 1;
   val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
-  if(!(std::abs(val.imag()) < 1e-13))
+  if (!main_IsReal(val))
   {
-    pStdLogs.Write("main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real\n\n");
-    pStdLogs.Write("%2.15le\n\n", val.imag());
-    THROW_EXCEPTION(std::invalid_argument, "main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real");
+    pStdLogs.Write("IM: %2.15le\n", val.imag());
+    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: 1st derivative stencil operator is not real");
   }
   res[1] = val.real();
 
   order[0] = 2;
   val = invM2 * lap2->EvalDerivative(order, pvec) - Z * lap->EvalDerivative(order, pvec);
-  if(!(std::abs(val.imag()) < 1e-13))
+  if (!main_IsReal(val))
   {
-    pStdLogs.Write("main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real\n\n");
-    pStdLogs.Write("%2.15le\n\n", val.imag());
-    THROW_EXCEPTION(std::invalid_argument, "main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real");
+    pStdLogs.Write("IM: %2.15le\n", val.imag());
+    THROW_EXCEPTION_VERB(std::invalid_argument, "main_LatticeDispersionDerivatives: 2nd derivative stencil operator is not real");
   }
   res[2] = val.real();
 
@@ -759,35 +750,6 @@ template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const P
 
 int main(int argc, char **argv)
 {
-  // auto x0 = FiniteDifference<int>::MakeOneSidedDiff(1, -4);
-  // x0->PrintStencil();
-
-  // pStdLogs.Write("\n");
-
-  // auto x1 = FiniteDifference<int>::MakeOneSidedDiff(1, 3);
-  // auto x2 = FiniteDifference<int>::MakeOneSidedDiff(1, -2);
-  // auto x3 = FiniteDifference<int>::ComposeOperators(*x1, *x2);
-
-  // auto x4 = FiniteDifference<int>::MakeLaplacian(2, *x1, *x2);
-
-  // x3->PrintStencil();
-  // pStdLogs.Write("\n");
-
-  // x4->PrintStencil();
-  // pStdLogs.Write("\n");
-
-  // VECTOR<double> p(2);
-  // p[0] = 0.133;
-  // p[1] = -2.14442 * M_PI;
-
-  // //auto lap = FiniteDifference<int>::Eval(p, *x4);
-  // auto lap = x4->Eval(p);
-
-  // x4->PrintStencil();
-  // pStdLogs.Write("%2.15le\t%2.15le\n", lap.real(), lap.imag());
-
-  // return 0;
-
   const string f_bin_attr = "wb";
   const string f_txt_attr = "w";
 
@@ -816,12 +778,15 @@ int main(int argc, char **argv)
   double m2 = pm2;
   double Z = pZ;
   double lambda = pLambdaN;
+  double n_stencil_pts = pNStencilPts;
 
   tPhysicalParams params;
   params.lambda = lambda;
   params.invM2 = invM2;
   params.m2 = m2;
   params.Z = Z;
+  
+  main_CreateLatticeOperators(params, ndim, n_stencil_pts);
 
   int n_iters = pNiters;
   int n_tries = pNtries;
