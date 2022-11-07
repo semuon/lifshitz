@@ -16,4 +16,6 @@ extern double pRelaxAlpha;
 extern double pRandomRange;
 extern tNewtonMethod pMethod;
 
+extern int pNStencilPts;
+
 #endif
