@@ -222,18 +222,40 @@ public:
     return res_ptr;
   }
 
+  static SHARED_PTR<FiniteDifference<T>> MakeDiffMarc()
+  {
+    const uint dim = 1;
+    const uint npts = 5;
+    SHARED_PTR<FiniteDifference<T>> res_ptr = MAKE_SHARED<FiniteDifference<T>>(dim);
+
+    AuxVector<int> aux(dim);
+
+    res_ptr->stencil.reserve(npts);
+
+    aux[0] = -2;
+    res_ptr->stencil.emplace_back(aux, rational<T>(-1,12));
+    aux[0] = -1;
+    res_ptr->stencil.emplace_back(aux, rational<T>(16,12));
+    aux[0] = 0;
+    res_ptr->stencil.emplace_back(aux, rational<T>(-30,12));
+    aux[0] = 1;
+    res_ptr->stencil.emplace_back(aux, rational<T>(16,12));
+    aux[0] = 2;
+    res_ptr->stencil.emplace_back(aux, rational<T>(-1,12));
+
+    return res_ptr;
+  }
+
   static SHARED_PTR<FiniteDifference<T>> MakeLaplacian(
-    uint dim, const FiniteDifference<T> &fwd1d, const FiniteDifference<T> &bwd1d)
+    uint dim, const FiniteDifference<T> &diff1d)
   {
     ASSERT(dim > 0);
-    ASSERT(fwd1d.Dim() == 1);
-    ASSERT(fwd1d.Dim() == bwd1d.Dim());
+    ASSERT(diff1d.Dim() == 1);
 
     auto res_ptr = MAKE_SHARED<FiniteDifference<T>>(dim);
     auto &res = *res_ptr;
 
-    auto central_ptr = FiniteDifference<T>::ComposeOperators(fwd1d, bwd1d);
-    auto &stencil1d = central_ptr->stencil;
+    auto &stencil1d = diff1d.stencil;
     uint npt1d = stencil1d.size();
 
     AuxVector<int> aux(dim);
@@ -244,7 +266,7 @@ public:
       const uint sidx = i % npt1d;
 
       for(uint j = 0; j < dim; j++)
-        aux[j] = (j == d) ? stencil1d[sidx].offset[0] : 0;
+        aux[j] = (j == d) ? stencil1d[sidx].offset.GetComponent(0) : 0;
 
       bool exists = false;
       for(uint j = 0; j < res.stencil.size(); j++)
