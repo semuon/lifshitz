@@ -19,17 +19,6 @@ using std::cout;
 using std::endl;
 using std::string;
 
-// typedef struct tScalarModelParams
-// {
-//   double m2;
-//   double invM2;
-//   double Z;
-//   double lambdaN;
-
-//   SHARED_PTR<FiniteDifference<int64_t>> laplace_ptr;
-//   SHARED_PTR<FiniteDifference<int64_t>> laplace_sqr_ptr;
-// } tPhysicalParams;
-
 template <typename T> bool main_IsFinite(const T value)
 {
   return std::isfinite(value);
@@ -46,17 +35,6 @@ bool main_IsReal(const t_complex value)
   const double im = value.imag();
 
   return std::isfinite(im) && (std::abs(im) < c_treshold);
-}
-
-void main_CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points)
-{
-  const uint op_dim = 1;
-
-  auto fwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, n_stencil_points);
-  auto bwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, -n_stencil_points);
-
-  params.laplace_ptr = FiniteDifference<int64_t>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
-  params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
 }
 
 template <typename T> T main_LatticeOp(const tScalarModelParams &params, const VECTOR<double> &p, const T epsilon)
