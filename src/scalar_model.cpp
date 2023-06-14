@@ -1,6 +1,17 @@
 #include "scalar_model.h"
 #include "profiler.h"
 
+void ScalarModel::CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points)
+{
+  const uint op_dim = 1;
+
+  auto fwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, n_stencil_points);
+  auto bwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, -n_stencil_points);
+
+  params.laplace_ptr = FiniteDifference<int64_t>::MakeLaplacian(ndim, *fwd1d, *bwd1d);
+  params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
+}
+
 void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_params, const int ndim, tScalarModelParams &phys_params)
 {
   // NOT IMPLEMENTED

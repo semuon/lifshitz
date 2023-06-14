@@ -12,24 +12,23 @@
 #include "linalg.h"
 #include <time.h>
 #include <mpi_module.h>
-
-#include "finite_diff.h"
+#include <finite_diff.h>
 
 // Don't use entire namespace std
 using std::cout;
 using std::endl;
 using std::string;
 
-typedef struct PhysicalParams_struct
-{
-  double m2;
-  double invM2;
-  double Z;
-  double lambda;
+// typedef struct tScalarModelParams
+// {
+//   double m2;
+//   double invM2;
+//   double Z;
+//   double lambdaN;
 
-  SHARED_PTR<FiniteDifference<int64_t>> laplace_ptr;
-  SHARED_PTR<FiniteDifference<int64_t>> laplace_sqr_ptr;
-} tPhysicalParams;
+//   SHARED_PTR<FiniteDifference<int64_t>> laplace_ptr;
+//   SHARED_PTR<FiniteDifference<int64_t>> laplace_sqr_ptr;
+// } tPhysicalParams;
 
 template <typename T> bool main_IsFinite(const T value)
 {
@@ -49,7 +48,7 @@ bool main_IsReal(const t_complex value)
   return std::isfinite(im) && (std::abs(im) < c_treshold);
 }
 
-void main_CreateLatticeOperators(tPhysicalParams &params, const uint ndim, const int n_stencil_points)
+void main_CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points)
 {
   const uint op_dim = 1;
 
@@ -60,14 +59,14 @@ void main_CreateLatticeOperators(tPhysicalParams &params, const uint ndim, const
   params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
 }
 
-template <typename T> T main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const T epsilon)
+template <typename T> T main_LatticeOp(const tScalarModelParams &params, const VECTOR<double> &p, const T epsilon)
 {
   THROW_EXCEPTION_VERB(std::invalid_argument, "METHOD IS NOT IMPLEMENTED");
 
   return 0;
 }
 
-template <> t_complex main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const t_complex epsilon)
+template <> t_complex main_LatticeOp(const tScalarModelParams &params, const VECTOR<double> &p, const t_complex epsilon)
 {
   double m2 = params.m2;
   double invM2 = params.invM2;
@@ -83,7 +82,7 @@ template <> t_complex main_LatticeOp(const PhysicalParams_struct &params, const 
   return val;
 }
 
-template <> double main_LatticeOp(const PhysicalParams_struct &params, const VECTOR<double> &p, const double epsilon)
+template <> double main_LatticeOp(const tScalarModelParams &params, const VECTOR<double> &p, const double epsilon)
 {
   double m2 = params.m2;
   double invM2 = params.invM2;
@@ -105,7 +104,7 @@ template <> double main_LatticeOp(const PhysicalParams_struct &params, const VEC
   return val;
 }
 
-template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const uint nderiv, const PhysicalParams_struct &params, const Lattice &lat, const T epsilon)
+template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const uint nderiv, const tScalarModelParams &params, const Lattice &lat, const T epsilon)
 {
   uint ndim = lat.Dim();
   uint vol = lat.Volume();
@@ -148,7 +147,7 @@ template <typename T> void main_LatticePropAndDerivatives(VECTOR<T> &res, const 
 }
 
 // This always returns 3 derivatives
-template <typename T> void main_ContinuumPropAndDerivatives(VECTOR<T> &res, const PhysicalParams_struct &params, const T epsilon)
+template <typename T> void main_ContinuumPropAndDerivatives(VECTOR<T> &res, const tScalarModelParams &params, const T epsilon)
 {
   res.clear();
   res.resize(3);
@@ -166,7 +165,7 @@ template <typename T> void main_ContinuumPropAndDerivatives(VECTOR<T> &res, cons
 }
 
 // mplus, mminus, mmodul, kmodul
-template <typename T> void main_ContinuumPoles(VECTOR<T> &res, const PhysicalParams_struct &params, const T epsilon)
+template <typename T> void main_ContinuumPoles(VECTOR<T> &res, const tScalarModelParams &params, const T epsilon)
 {
   res.clear();
   res.resize(4);
@@ -191,12 +190,12 @@ template <typename T> void main_ContinuumPoles(VECTOR<T> &res, const PhysicalPar
   res[3] = (is_symm_phase) ? 0 : k0;
 }
 
-bool main_ContinuumBisection(double &epsilon, uint &iters, const PhysicalParams_struct &params, const double tol, const uint maxiter)
+bool main_ContinuumBisection(double &epsilon, uint &iters, const tScalarModelParams &params, const double tol, const uint maxiter)
 {
   double m2 = params.m2;
   double M = sqrt(1 / params.invM2);
   double Z = params.Z;
-  double lambda = params.lambda;
+  double lambda = params.lambdaN;
 
   VECTOR<double> derivs(3);
 
@@ -281,7 +280,7 @@ bool main_ContinuumBisection(double &epsilon, uint &iters, const PhysicalParams_
   return converged;
 }
 
-void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, const uint ndim, const PhysicalParams_struct &params)
+void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, const uint ndim, const tScalarModelParams &params)
 {
   res.clear();
   res.resize(3);
@@ -343,7 +342,7 @@ void main_LatticeDispersionDerivatives(VECTOR<double> &res, const double p, cons
   //res[2] = 2.0 * K1 * (-4.0 * cos(2.0 * p) + 4.0 * cos(p)) - 2.0 * K2 * cos(p);
 }
 
-bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const uint maxiter, const uint ndim, const PhysicalParams_struct &params)
+bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const uint maxiter, const uint ndim, const tScalarModelParams &params)
 {
   res.clear();
   res.resize(2);
@@ -455,14 +454,14 @@ bool main_LatticeDispersionMinimum(VECTOR<double> &res, const double tol, const 
   return converged;
 }
 
-bool main_LatticeBisection(double &epsilon, double &pmin, uint &iters, const PhysicalParams_struct &params, const Lattice &lat, const double tol, const uint maxiter)
+bool main_LatticeBisection(double &epsilon, double &pmin, uint &iters, const tScalarModelParams &params, const Lattice &lat, const double tol, const uint maxiter)
 {
   uint ndim = lat.Dim();
 
   double m2 = params.m2;
   //double M = sqrt(1 / params.invM2);
   //double Z = params.Z;
-  double lambda = params.lambda;
+  double lambda = params.lambdaN;
 
   const uint nderivs = 1;
   VECTOR<double> derivs(nderivs);
@@ -553,7 +552,7 @@ bool main_LatticeBisection(double &epsilon, double &pmin, uint &iters, const Phy
   return converged;
 }
 
-void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct &params, const Lattice &lat, const t_complex epsilon)
+void main_LatticeCorrelator(VECTOR<t_complex> &corr, const tScalarModelParams &params, const Lattice &lat, const t_complex epsilon)
 {
   uint ndim = lat.Dim();
   uint vol = lat.Volume();
@@ -600,12 +599,12 @@ void main_LatticeCorrelator(VECTOR<t_complex> &corr, const PhysicalParams_struct
   }
 }
 
-template <typename T> bool main_Newton(T &epsilon, uint &iters, const PhysicalParams_struct &params, const Lattice &lat, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
+template <typename T> bool main_Newton(T &epsilon, uint &iters, const tScalarModelParams &params, const Lattice &lat, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
 {
   epsilon = 0;
   iters = 0;
 
-  double lambda = params.lambda;
+  double lambda = params.lambdaN;
 
   T epsilon1 = epsilon0;
   T epsilon2 = 0;
@@ -681,14 +680,14 @@ template <typename T> bool main_Newton(T &epsilon, uint &iters, const PhysicalPa
   return converged;
 }
 
-template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const PhysicalParams_struct &params, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
+template <typename T> bool main_NewtonContinuum(T &epsilon, uint &iters, const tScalarModelParams &params, const T epsilon0, const tNewtonMethod method, const double tol, const uint maxiter)
 {
   const uint nderivs = 3;
 
   epsilon = 0;
   iters = 0;
 
-  double lambda = params.lambda;
+  double lambda = params.lambdaN;
 
   T epsilon1 = epsilon0;
   T epsilon2 = 0;
@@ -783,13 +782,14 @@ int main(int argc, char **argv)
   double lambda = pLambdaN;
   double n_stencil_pts = pNStencilPts;
 
-  tPhysicalParams params;
-  params.lambda = lambda;
+  tScalarModelParams params;
+  params.lambdaN = lambda;
   params.invM2 = invM2;
   params.m2 = m2;
   params.Z = Z;
+  params.kappa = 0;
   
-  main_CreateLatticeOperators(params, ndim, n_stencil_pts);
+  ScalarModel::CreateLatticeOperators(params, ndim, n_stencil_pts);
 
   int n_iters = pNiters;
   int n_tries = pNtries;
