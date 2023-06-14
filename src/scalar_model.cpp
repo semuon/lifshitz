@@ -96,7 +96,6 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
 
   const Lattice &lat = phi.GetLattice();
 
-  int ndim = lat.Dim();
   uint vol = lat.Volume();
 
   // Finite differences stencils
@@ -165,37 +164,41 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
 
   const Lattice &lat = phi.GetLattice();
 
-  int ndim = lat.Dim();
+  uint ndim = lat.Dim();
   uint vol = lat.Volume();
 
-  // Kinetic terms
+  // Finite differences stencils
+  const VECTOR<StencilPoint<int, int64_t>> &lap = params.laplace_ptr->GetStencil();
+  const VECTOR<StencilPoint<int, int64_t>> &lap_sqr = params.laplace_sqr_ptr->GetStencil();
+  AuxVector<int> offset_bwd(ndim);
+
   for(uint i = 0; i < n; i++)
   {
     for(uint x = 0; x < vol; x++)
     {
-      force(x, i) = (m2 + invM2 * 4.0 * (double)(ndim * ndim) + Z * 5.0 * (double)ndim / 2.0) * phi(x, i);
+      // Mass
+      force(x, i) = m2 * phi(x, i);
 
-      for(int mu = 0; mu < ndim; mu++)
+      // Laplacian
+      for(uint si = 0; si < lap.size(); si++)
       {
-        uint xmu_fwd = lat.SiteIndexForward(x, mu);
-        uint xmu_bwd = lat.SiteIndexBackward(x, mu);
-        uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
-        uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
+        for(uint mu = 0; mu < ndim; mu++) { offset_bwd[mu] = -lap[si].offset.GetComponent(mu); }
 
-        for(int nu = 0; nu < ndim; nu++)
-        {
-          uint xmu_fwd_nu_fwd = lat.SiteIndexForward(xmu_fwd, nu);
-          uint xmu_fwd_nu_bwd = lat.SiteIndexBackward(xmu_fwd, nu);
-          uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
-          uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
+        uint yfwd = SiteIndexByOffset(lat, x, lap[si].offset);
+        uint ybwd = SiteIndexByOffset(lat, x, offset_bwd);
 
-          force(x, i) += invM2 * (phi(xmu_fwd_nu_fwd, i) + phi(xmu_fwd_nu_bwd, i) + phi(xmu_bwd_nu_fwd, i) + phi(xmu_bwd_nu_bwd, i));
-        }
+        force(x, i) += -0.5 * Z * boost::rational_cast<double>(lap[si].coef) * (phi(yfwd, i) + phi(ybwd, i));
+      }
 
-        force(x, i) -= 4.0 * (double)ndim * invM2 * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
+      // Laplacian squared
+      for(uint si = 0; si < lap_sqr.size(); si++)
+      {
+        for(uint mu = 0; mu < ndim; mu++) { offset_bwd[mu] = -lap_sqr[si].offset.GetComponent(mu); }
 
-        force(x, i) -= Z * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
-        force(x, i) += (Z / 12.0) * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i) - 4.0 * phi(xmu_fwd, i) - 4.0 * phi(xmu_bwd, i));
+        uint yfwd = SiteIndexByOffset(lat, x, lap_sqr[si].offset);
+        uint ybwd = SiteIndexByOffset(lat, x, offset_bwd);
+
+        force(x, i) += 0.5 * invM2 * boost::rational_cast<double>(lap_sqr[si].coef) * (phi(yfwd, i) + phi(ybwd, i));
       }
     }
   }
