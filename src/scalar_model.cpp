@@ -55,6 +55,30 @@ void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vo
   }
 }
 
+uint ScalarModel::SiteIndexByOffset(const Lattice &lat, uint x, const AuxVector<int> &offset)
+{
+  uint ndim = lat.Dim();
+  uint res = x;
+
+  for(uint mu = 0; mu < ndim; mu++)
+  {
+    int dx = offset.GetComponent(mu);
+
+    if (dx > 0)
+    {
+      for(int i = 0; i < dx; i++)
+        res = lat.SiteIndexForward(res, mu);
+    }
+    else if (dx < 0)
+    {
+      for(int i = 0; i < -dx; i++)
+        res = lat.SiteIndexBackward(res, mu);
+    }
+  }
+
+  return res;
+}
+
 double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFieldN &phi)
 {
   pGlobalProfiler.StartTimer("Action");
@@ -73,41 +97,38 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   int ndim = lat.Dim();
   uint vol = lat.Volume();
 
+  // Finite differences stencils
+  const VECTOR<StencilPoint<int, int64_t>> &lap = params.laplace_ptr->GetStencil();
+  const VECTOR<StencilPoint<int, int64_t>> &lap_sqr = params.laplace_sqr_ptr->GetStencil();
+
   double res = 0;
 
-  // Kinetic terms
   for(uint i = 0; i < n; i++)
   {
     for(uint x = 0; x < vol; x++)
     {
-      res += (m2 + invM2 * 4.0 * (double)(ndim * ndim) + Z * 5.0 * (double)ndim / 2.0) * phi(x, i) * phi(x, i);
-
-      for(int mu = 0; mu < ndim; mu++)
+      // Laplacian
+      for(uint si = 0; si < lap.size(); si++)
       {
-        uint xmu_fwd = lat.SiteIndexForward(x, mu);
-        uint xmu_bwd = lat.SiteIndexBackward(x, mu);
-        uint x2mu_fwd = lat.SiteIndexForward(xmu_fwd, mu);
-        uint x2mu_bwd = lat.SiteIndexBackward(xmu_bwd, mu);
+        uint y = SiteIndexByOffset(lat, x, lap[si].offset);
+        boost::rational<int64_t> coef = lap[si].coef;
 
-        for(int nu = 0; nu < ndim; nu++)
-        {
-          uint xmu_fwd_nu_fwd = lat.SiteIndexForward(xmu_fwd, nu);
-          uint xmu_fwd_nu_bwd = lat.SiteIndexBackward(xmu_fwd, nu);
-          uint xmu_bwd_nu_fwd = lat.SiteIndexForward(xmu_bwd, nu);
-          uint xmu_bwd_nu_bwd = lat.SiteIndexBackward(xmu_bwd, nu);
-
-          res += phi(x, i) * invM2 * (phi(xmu_fwd_nu_fwd, i) + phi(xmu_fwd_nu_bwd, i) + phi(xmu_bwd_nu_fwd, i) + phi(xmu_bwd_nu_bwd, i));
-        }
-
-        res -= phi(x, i) * 4.0 * (double)ndim * invM2 * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
-
-        res -= phi(x, i) * Z * (phi(xmu_fwd, i) + phi(xmu_bwd, i));
-        res += phi(x, i) * (Z / 12.0) * (phi(x2mu_fwd, i) + phi(x2mu_bwd, i) - 4.0 * phi(xmu_fwd, i) - 4.0 * phi(xmu_bwd, i));
+        res += -0.5 * Z * boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
       }
+
+      // Laplacian squared
+      for(uint si = 0; si < lap_sqr.size(); si++)
+      {
+        uint y = SiteIndexByOffset(lat, x, lap_sqr[si].offset);
+        boost::rational<int64_t> coef = lap_sqr[si].coef;
+
+        res += 0.5 * invM2 * boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
+      }
+
+      // Mass
+      res += 0.5 * m2 * phi(x, i) * phi(x, i);
     }
   }
-
-  res *= 1.0 /2.0;
 
   // Interaction terms
   for(uint x = 0; x < vol; x++)

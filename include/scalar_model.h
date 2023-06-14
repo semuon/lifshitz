@@ -30,11 +30,13 @@ class ScalarModel
 private:
   ScalarModel() {}
 
+  static uint SiteIndexByOffset(const Lattice &lat, uint x, const AuxVector<int> &offset);
+
 public:
   static void ConvertCouplings(const tLatticeScalarModelParams &lattice_params, const int ndim, tScalarModelParams &phys_params);
 
   static void CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points);
-  
+
   static double Action(const tScalarModelParams &params, const RealScalarFieldN &phi);
   static void HMCforce(const tScalarModelParams &params, const RealScalarFieldN &phi, RealScalarFieldN &force);
 
