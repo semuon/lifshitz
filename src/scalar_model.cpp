@@ -103,6 +103,38 @@ void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vo
   }
 }
 
+void ScalarModel::CorrelationMatrix(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr)
+{
+  const Lattice &lat = phi.GetLattice();
+
+  uint vol = lat.Volume();
+  uint n = phi.N();
+  uint ls = lat.LatticeSize(mu);
+
+  corr.resize(ls * n * n);
+
+  for(uint i = 0; i < corr.size(); i++)
+    corr[i] = 0;
+
+  uint xmax = (vol_avg) ? vol : 1;
+
+  for(uint x = 0; x < xmax; x++)
+  {
+    uint x1 = x;
+
+    for(uint s = 0; s < ls; s++)
+    {
+      for(uint i = 0; i < n; i++)
+      for(uint j = i; j < n; j++) // I'm lazy
+      {
+        corr[s * n * n + i * n + j] += phi(x, i) * phi(x1, j) / (n * xmax);
+      }
+
+      x1 = lat.SiteIndexForward(x1, mu);
+    }
+  }
+}
+
 uint ScalarModel::SiteIndexByOffset(const Lattice &lat, uint x, const AuxVector<int> &offset)
 {
   uint ndim = lat.Dim();

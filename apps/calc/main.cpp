@@ -115,6 +115,7 @@ int main(int argc, char **argv)
   }
 
   int n = pN;
+  int n_stencil_pts = pNStencilPts;
 
   tScalarModelParams params;
   params.lambdaN = pLambdaN;
@@ -123,6 +124,8 @@ int main(int argc, char **argv)
   params.Z = pZ;
   params.N = pN;
   params.kappa = pKappa;
+
+  ScalarModel::CreateLatticeOperators(params, ndim, n_stencil_pts);
 
   if (pIsLatticeParamsSet)
   {
@@ -151,7 +154,7 @@ int main(int argc, char **argv)
 
   const std::string fname_confs = pFnameConfs;
 
-  const std::string fname_corr = "correlator.bin";
+  const std::string fname_corr = "correlator_matrix.bin";
 
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_read_attr);
 
@@ -201,7 +204,7 @@ int main(int argc, char **argv)
       {
         for(uint mu = 0; mu < ndim; mu++)
         {
-          ScalarModel::CorrelationFunction(phi_field, corr_vol_avg, mu, corr);
+          ScalarModel::CorrelationMatrix(phi_field, corr_vol_avg, mu, corr);
 
           Formats::DumpBinary(f_corrs[mu], corr);
         }
