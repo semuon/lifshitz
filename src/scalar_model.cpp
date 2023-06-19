@@ -173,6 +173,7 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   ASSERT(n == phi.N());
 
   const Lattice &lat = phi.GetLattice();
+  const RealScalarFieldN &ext_h = *params.h_ptr;
 
   uint vol = lat.Volume();
 
@@ -221,6 +222,15 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
     res += kappa * phi2 * phi2 * phi2 / 6.0;
   }
 
+  // External field
+  for(uint i = 0; i < n; i++)
+  {
+    for(uint x = 0; x < vol; x++)
+    {
+      res += -ext_h(x, i) * phi(x, i);
+    }
+  }
+
   pGlobalProfiler.StopTimer("Action");
 
   return res;
@@ -241,6 +251,7 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
   ASSERT(n == force.N());
 
   const Lattice &lat = phi.GetLattice();
+  const RealScalarFieldN &ext_h = *params.h_ptr;
 
   uint ndim = lat.Dim();
   uint vol = lat.Volume();
@@ -293,6 +304,15 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
     {
       force(x, i) += lambdaN * phi2 * phi(x, i) / n;
       force(x, i) += kappa * phi2 * phi2 * phi(x, i);
+    }
+  }
+
+  // External field
+  for(uint i = 0; i < n; i++)
+  {
+    for(uint x = 0; x < vol; x++)
+    {
+      force(x, i) += -ext_h(x, i);
     }
   }
 

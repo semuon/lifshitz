@@ -178,6 +178,10 @@ int main(int argc, char **argv)
   int n = pN;
   int n_stencil_pts = pNStencilPts;
 
+  const double ext_h_h0 = 0.2;
+  const double ext_h_k0 = 0.2 * M_PI;
+  const double ext_h_sigma0 = 0.1;
+
   tScalarModelParams params;
   params.lambdaN = pLambdaN;
   params.invM2 = pInvM2;
@@ -185,14 +189,13 @@ int main(int argc, char **argv)
   params.Z = pZ;
   params.N = pN;
   params.kappa = pKappa;
+  params.h_ptr = MAKE_SHARED<RealScalarFieldN>(lat, n);
   ScalarModel::CreateLatticeOperators(params, ndim, n_stencil_pts);
+  ScalarModel::ExternalField(*params.h_ptr, ext_h_h0, ext_h_k0, ext_h_sigma0);
 
-  auto fff = FiniteDifference<int64_t>::MakeOneSidedDiff(1, 2);
-  fff->PrintStencil();
-
-  pStdLogs.Write("\n\n");
+  pStdLogs.Write("Laplacian:\n");
   params.laplace_ptr->PrintStencil();
-  pStdLogs.Write("\n\n");
+  pStdLogs.Write("\nSquared Laplacian:\n");
   params.laplace_sqr_ptr->PrintStencil();
   pStdLogs.Write("\n\n");
 

@@ -13,6 +13,7 @@ typedef struct ScalarModelParams_struct
   double lambdaN;
   double N;
   double kappa;
+  SHARED_PTR<RealScalarFieldN> h_ptr;
   SHARED_PTR<FiniteDifference<int64_t>> laplace_ptr;
   SHARED_PTR<FiniteDifference<int64_t>> laplace_sqr_ptr;
 } tScalarModelParams;
