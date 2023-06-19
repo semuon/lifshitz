@@ -37,6 +37,8 @@ public:
 
   static void CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points);
 
+  static void ExternalField(RealScalarFieldN &h, const double h0, const double k0, const double sigma0);
+
   static double Action(const tScalarModelParams &params, const RealScalarFieldN &phi);
   static void HMCforce(const tScalarModelParams &params, const RealScalarFieldN &phi, RealScalarFieldN &force);
 

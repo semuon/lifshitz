@@ -33,6 +33,45 @@ void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_para
   phys_params.kappa = 6.0 * lattice_params.kappa;
 }
 
+void ScalarModel::ExternalField(RealScalarFieldN &h, const double h0, const double k0, const double sigma0)
+{
+  const Lattice &lat = h.GetLattice();
+
+  uint vol = lat.Volume();
+  uint ndim = lat.Dim();
+  uint n = h.N();
+
+  const int mu = 0;
+  const uint l = lat.LatticeSize((uint)mu);
+
+  VECTOR<int> xs(ndim);
+
+  h.Clear();
+
+  for(uint x = 0; x < vol; x++)
+  {
+    lat.SiteCoordinates(xs, x);
+
+    for(uint k = 0; k < l; k++)
+    {
+      double p = 2 * M_PI * k / (double)l;
+      double prefactor = h0 * exp(-(p - k0) * (p - k0) / (2 * sigma0)) / ((double)l * sigma0 * sqrt(2 * M_PI));
+
+      for (uint i = 0; i < n; i++)
+      {
+        if (i == 0)
+        {
+          h(x, i) += prefactor * cos(p * (double)xs[mu]);
+        }
+        else if (i == 1)
+        {
+          h(x, i) += prefactor * sin(p * (double)xs[mu]);
+        }
+      }
+    }
+  }
+}
+
 void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr)
 {
   const Lattice &lat = phi.GetLattice();
