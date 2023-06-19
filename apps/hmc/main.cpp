@@ -176,6 +176,7 @@ int main(int argc, char **argv)
   uint vol = lat.Volume();
 
   int n = pN;
+  int n_stencil_pts = pNStencilPts;
 
   tScalarModelParams params;
   params.lambdaN = pLambdaN;
@@ -184,7 +185,7 @@ int main(int argc, char **argv)
   params.Z = pZ;
   params.N = pN;
   params.kappa = pKappa;
-  ScalarModel::CreateLatticeOperators(params, ndim, 2);
+  ScalarModel::CreateLatticeOperators(params, ndim, n_stencil_pts);
 
   auto fff = FiniteDifference<int64_t>::MakeOneSidedDiff(1, 2);
   fff->PrintStencil();

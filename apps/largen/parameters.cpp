@@ -7,4 +7,4 @@ double pRelaxAlpha = 0.5;
 double pRandomRange = 10.0;
 tNewtonMethod pMethod = ITERATIONS_NEWTON;
 
-int pNStencilPts = 2;
+//int pNStencilPts = 2;

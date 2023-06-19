@@ -50,7 +50,7 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   TCLAP::ValueArg<int> argNtries("", "n-tries", "Number of distinct random initial conditions for iterations.", false, pNtries, "n", cmd);
   TCLAP::ValueArg<double> argRandRange("", "rand-range", "Initial values of epsilon field will be in the range [-<n>, +<n>].", false, pRandomRange, "n", cmd);
   TCLAP::ValueArg<double> argRelaxAlpha("", "relax-alpha", "Value of relaxation parameter.", false, pRelaxAlpha, "n", cmd);
-  TCLAP::ValueArg<int> argNStencilPts("", "n-stencil", "Number of points of finite difference stencil, by default is 2", false, pNStencilPts, "n", cmd);
+  //TCLAP::ValueArg<int> argNStencilPts("", "n-stencil", "Number of points of finite difference stencil, by default is 2", false, pNStencilPts, "n", cmd);
 
   NewtonMethodParser default_method;
   std::vector<NewtonMethodParser> allowed_methods;
@@ -67,7 +67,7 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   pNiters = argNiters.getValue();
   pNtries = argNtries.getValue();
   pMethod = argMethod.getValue().type;
-  pNStencilPts = argNStencilPts.getValue();
+  //pNStencilPts = argNStencilPts.getValue();
 
   option_parser_CheckParameters();
 }
@@ -89,7 +89,7 @@ void option_parser_PrintParameters()
   pStdLogs.Write("  Max. iterations:                             %d\n", pNiters);
   pStdLogs.Write("  Num. of tries:                               %d\n", pNtries);
   pStdLogs.Write("  Rand. range:                                 %2.4le\n", pRandomRange);
-  pStdLogs.Write("  Number of stencil points:                    %d\n", pNStencilPts);
+  //pStdLogs.Write("  Number of stencil points:                    %d\n", pNStencilPts);
 
   pStdLogs.Write("\n");
 }

@@ -3,12 +3,19 @@
 
 void ScalarModel::CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points)
 {
-  const uint op_dim = 1;
-  auto fwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, n_stencil_points);
-  auto bwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, -n_stencil_points);
-  auto diff1d = FiniteDifference<int64_t>::ComposeOperators(*fwd1d, *bwd1d);
+  SHARED_PTR<FiniteDifference<int64_t>> diff1d;
 
-  //auto diff1d = FiniteDifference<int64_t>::MakeDiffMarc();
+  if (n_stencil_points == c_Winstel_stencil)
+  {
+    diff1d = FiniteDifference<int64_t>::MakeDiffMarc();
+  }
+  else
+  {
+    const uint op_dim = 1;
+    auto fwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, n_stencil_points);
+    auto bwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, -n_stencil_points);
+    diff1d = FiniteDifference<int64_t>::ComposeOperators(*fwd1d, *bwd1d);
+  }
 
   params.laplace_ptr = FiniteDifference<int64_t>::MakeLaplacian(ndim, *diff1d);
   params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);

@@ -5,6 +5,8 @@
 
 const double c_flt_epsilon = __FLT_EPSILON__;
 
+const int c_Winstel_stencil = 5; // temporary
+
 extern uint pDim;
 extern uint pNumDiagDims;
 extern VECTOR<uint> pL;
@@ -13,6 +15,8 @@ extern double pLambdaN;
 extern double pInvM2;
 extern double pm2;
 extern double pZ;
+
+extern int pNStencilPts;
 
 extern std::string pLogsDirPath;
 extern std::string pDataDirPath;

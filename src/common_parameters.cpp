@@ -9,6 +9,8 @@ double pInvM2 = 0.0;
 double pm2 = 0.0;
 double pZ = 1.0;
 
+int pNStencilPts = c_Winstel_stencil;
+
 std::string pLogsDirPath;
 std::string pDataDirPath;
 std::string pPrefix;

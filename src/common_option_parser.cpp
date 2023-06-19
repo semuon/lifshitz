@@ -28,6 +28,8 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::ValueArg<double> argZ("", "Z", "Spatial derivative factor", false, 1.0, "real number", cmd);
     TCLAP::ValueArg<double> argLambda("", "lambda-N", "t'Hooft coupling lambda * N", false, 1.0, "real number", cmd);
 
+    TCLAP::ValueArg<int> argNStencilPts("", "n-stencil", "Number of points for lattice Laplacian, by default is 5 (as in Winstel's code)", false, pNStencilPts, "n", cmd);
+
     try
     {
       option_parser_Parse(cmd, argc, argv);
@@ -42,6 +44,8 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     pm2 = argm2.getValue();
     pZ = argZ.getValue();
     pLambdaN = argLambda.getValue();
+
+    pNStencilPts = argNStencilPts.getValue();
 
     pLogsDirPath = argLogsDir.getValue();
     pDataDirPath = argDataDir.getValue();
@@ -148,6 +152,7 @@ common_option_parser_PrintParameters(int argc, char **argv)
   pStdLogs.Write("  m^2:                                        % -2.4le\n", pm2);
   pStdLogs.Write("  1/M^2:                                      % -2.4le\n", pInvM2);
   pStdLogs.Write("  Z:                                          % -2.4le\n", pZ);
+  pStdLogs.Write("  Number of stencil points for Laplacian:     % -d\n", pNStencilPts);
   
   option_parser_PrintParameters();
 }
