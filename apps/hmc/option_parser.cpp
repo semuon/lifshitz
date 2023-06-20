@@ -83,9 +83,6 @@ static void option_parser_CheckParameters()
 
 void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 {
-  TCLAP::ValueArg<double> argKappa("", "kappa", "Sextic coupling constant: (kappa * phi^6) / 6", false, pKappa, "n", cmd);
-  TCLAP::ValueArg<int> argN("", "N", "Rank of the symmetry group O(N).", false, pN, "n", cmd);
-
   TCLAP::ValueArg<int> argHmcNumSteps("", "hmc-num-steps", "Number of steps in one HMC trajectory.", false, pHmcNumSteps, "n", cmd);
   TCLAP::ValueArg<int> argHmcNumConf("", "hmc-num-conf", "Number of HMC configurations.", false, pHmcNumConf, "n", cmd);
   TCLAP::ValueArg<int> argHmcNumConfStep("", "hmc-num-conf-step", "Save every <hmc-num-conf-step> configuration.", false, pHmcNumConfStep, "n", cmd);
@@ -119,9 +116,6 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
   cmd.parse(argc, argv);
 
-  pN = argN.getValue();
-  pKappa = argKappa.getValue();
-
   pFnameStartConf = argFnameConf.getValue();
   pStartType = (argFnameConfVisitor.IsFlagSet()) ? START_CONFIGURATION_LOAD : argStartType.getValue().type;
 
@@ -147,9 +141,6 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
 void option_parser_PrintParameters()
 {
-  pStdLogs.Write("  kappa:                                      % -2.4le\n", pKappa);
-  pStdLogs.Write("  N:                                          % -d\n", pN);
-
   if (pIsLatticeParamsSet)
   {
     pStdLogs.Write("\nLattice couplings are set. The above couplings will be discarded.\n");

@@ -4,6 +4,9 @@ uint pDim = 3;
 uint pNumDiagDims = 0;
 VECTOR<uint> pL(pDim, 1);
 
+int pN = 1;
+double pKappa = 0;
+
 double pLambdaN = 1.0;
 double pInvM2 = 0.0;
 double pm2 = 0.0;

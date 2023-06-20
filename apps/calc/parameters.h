@@ -16,9 +16,6 @@ typedef enum EnumIntegratorType
   INTEGRATOR_OMELYAN = 1
 }tIntegratorType;
 
-extern int pN;
-extern double pKappa;
-
 extern double pLatK1;
 extern double pLatK2;
 extern double pLatLambda;

@@ -23,6 +23,9 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::ValueArg<uint> argDim("", "dim", "Number of spatial dimensions. By default is 3.", false, 3, "dimension", cmd);
     TCLAP::ValueArg<std::string> argL("", "L", "Lattice size", true, "5,5,5", "L1,L2,L3,...", cmd);
 
+    TCLAP::ValueArg<double> argKappa("", "kappa", "Sextic coupling constant: (kappa * phi^6) / 6", false, pKappa, "n", cmd);
+    TCLAP::ValueArg<int> argN("", "N", "Rank of the symmetry group O(N).", false, pN, "n", cmd);
+
     TCLAP::ValueArg<double> argInvM2("", "inv-M2", "Inverse of heavy mass scale M^2", false, 0, "real number", cmd);
     TCLAP::ValueArg<double> argm2("", "m2", "Mass (squared)", false, 1.0, "real number", cmd);
     TCLAP::ValueArg<double> argZ("", "Z", "Spatial derivative factor", false, 1.0, "real number", cmd);
@@ -43,6 +46,9 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
       std::cerr << "Wrong option value: " << ex.what() << std::endl;
       std::exit(-1);
     }
+
+    pN = argN.getValue();
+    pKappa = argKappa.getValue();
 
     pInvM2 = argInvM2.getValue();
     pm2 = argm2.getValue();
@@ -155,12 +161,14 @@ common_option_parser_PrintParameters(int argc, char **argv)
   pStdLogs.Write("%-3d\n", pL[pDim - 1]);
 
   pStdLogs.Write("  Dim:                                        % -d\n", pDim);
+  pStdLogs.Write("  N:                                          % -d\n", pN);
   pStdLogs.Write("  Number of stencil points for Laplacian:     % -d\n", pNStencilPts);
 
   pStdLogs.Write("  lambda*N:                                   % -2.4le\n", pLambdaN);
   pStdLogs.Write("  m^2:                                        % -2.4le\n", pm2);
   pStdLogs.Write("  1/M^2:                                      % -2.4le\n", pInvM2);
   pStdLogs.Write("  Z:                                          % -2.4le\n", pZ);
+  pStdLogs.Write("  kappa:                                      % -2.4le\n", pKappa);
 
   pStdLogs.Write("  h0:                                         % -2.4le\n", pExtH0);
   if (pExtH0 != 0)

@@ -1,8 +1,5 @@
 #include "parameters.h"
 
-int pN = 1;
-double pKappa = 0;
-
 double pLatK1 = 1.0;
 double pLatK2 = 0.0;
 double pLatLambda = 1.0;

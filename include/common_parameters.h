@@ -11,6 +11,9 @@ extern uint pDim;
 extern uint pNumDiagDims;
 extern VECTOR<uint> pL;
 
+extern int pN;
+extern double pKappa;
+
 extern double pLambdaN;
 extern double pInvM2;
 extern double pm2;

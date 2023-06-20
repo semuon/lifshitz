@@ -9,9 +9,6 @@ static void option_parser_CheckParameters()
 
 void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 {
-  TCLAP::ValueArg<double> argKappa("", "kappa", "Sextic coupling constant: (kappa * phi^6) / 6", false, pKappa, "n", cmd);
-  TCLAP::ValueArg<int> argN("", "N", "Rank of the symmetry group O(N).", false, pN, "n", cmd);
-
   TCLAP::ValueArg<int> argNumSkipFirst("", "num-skip-first", "Skip first <num-skip-first> configurations.", false, pNumSkipFirst, "n", cmd);
   TCLAP::ValueArg<int> argNumSkipLast("", "num-skip-last", "Skip last <num-skip-last> configurations.", false, pNumSkipLast, "n", cmd);
   TCLAP::ValueArg<int> argConfStep("", "conf-step", "Process every <conf-step> configuration.", false, pConfStep, "n", cmd);
@@ -28,9 +25,6 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   TCLAP::SwitchArg switchIsVolAvgCorr("", "vol-avg-corr", "Average correlation function over volume", cmd, false);
 
   cmd.parse(argc, argv);
-
-  pN = argN.getValue();
-  pKappa = argKappa.getValue();
 
   pFnameConfs = argFnameConf.getValue();
   
@@ -53,9 +47,6 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
 void option_parser_PrintParameters()
 {
-  pStdLogs.Write("  kappa:                                      % -2.4le\n", pKappa);
-  pStdLogs.Write("  N:                                          % -d\n", pN);
-
   if (pIsLatticeParamsSet)
   {
     pStdLogs.Write("\nLattice couplings are set. The above couplings will be discarded.\n");
