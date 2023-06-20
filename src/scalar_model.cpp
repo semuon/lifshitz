@@ -72,7 +72,7 @@ void ScalarModel::ExternalField(RealScalarFieldN &h, const double h0, const doub
   }
 }
 
-void ScalarModel::CorrelationFunction(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr)
+void ScalarModel::CorrelationFunctionOLD(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr)
 {
   const Lattice &lat = phi.GetLattice();
 
