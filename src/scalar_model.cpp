@@ -24,7 +24,7 @@ void ScalarModel::CreateLatticeOperators(tScalarModelParams &params, const uint 
 void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_params, const int ndim, tScalarModelParams &phys_params)
 {
   // NOT IMPLEMENTED
-  ASSERT(false);
+  // ASSERT(false);
 
   phys_params.invM2 = 2.0 * lattice_params.k2;
   phys_params.Z = 2.0 * lattice_params.k1 - 8.0 * lattice_params.k2;
