@@ -28,6 +28,10 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     TCLAP::ValueArg<double> argZ("", "Z", "Spatial derivative factor", false, 1.0, "real number", cmd);
     TCLAP::ValueArg<double> argLambda("", "lambda-N", "t'Hooft coupling lambda * N", false, 1.0, "real number", cmd);
 
+    TCLAP::ValueArg<double> argExtH0("", "ext-h0", "Magnitude of external h(x)", false, pExtH0, "real number", cmd);
+    TCLAP::ValueArg<double> argExtK0("", "ext-k0", "k0 of external h(x)", false, pExtK0, "real number", cmd);
+    TCLAP::ValueArg<double> argExtSigma0("", "ext-sigma0", "sigma0 of external h(x)", false, pExtSigma0, "real number", cmd);
+
     TCLAP::ValueArg<int> argNStencilPts("", "n-stencil", "Number of points for lattice Laplacian, by default is 5 (as in Winstel's code)", false, pNStencilPts, "n", cmd);
 
     try
@@ -44,6 +48,10 @@ void common_option_parser_Parse(int argc, char **argv, const std::string &app_na
     pm2 = argm2.getValue();
     pZ = argZ.getValue();
     pLambdaN = argLambda.getValue();
+
+    pExtH0 = argExtH0.getValue();
+    pExtK0 = argExtK0.getValue();
+    pExtSigma0 = argExtSigma0.getValue();
 
     pNStencilPts = argNStencilPts.getValue();
 
@@ -147,12 +155,19 @@ common_option_parser_PrintParameters(int argc, char **argv)
   pStdLogs.Write("%-3d\n", pL[pDim - 1]);
 
   pStdLogs.Write("  Dim:                                        % -d\n", pDim);
+  pStdLogs.Write("  Number of stencil points for Laplacian:     % -d\n", pNStencilPts);
 
   pStdLogs.Write("  lambda*N:                                   % -2.4le\n", pLambdaN);
   pStdLogs.Write("  m^2:                                        % -2.4le\n", pm2);
   pStdLogs.Write("  1/M^2:                                      % -2.4le\n", pInvM2);
   pStdLogs.Write("  Z:                                          % -2.4le\n", pZ);
-  pStdLogs.Write("  Number of stencil points for Laplacian:     % -d\n", pNStencilPts);
+
+  pStdLogs.Write("  h0:                                         % -2.4le\n", pExtH0);
+  if (pExtH0 != 0)
+  {
+    pStdLogs.Write("    k0:                                       % -2.4le\n", pExtK0);
+    pStdLogs.Write("    sigma0:                                   % -2.4le\n", pExtSigma0);
+  }
   
   option_parser_PrintParameters();
 }

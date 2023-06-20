@@ -9,6 +9,10 @@ double pInvM2 = 0.0;
 double pm2 = 0.0;
 double pZ = 1.0;
 
+double pExtH0 = 0;
+double pExtK0 = 0.2 * M_PI;
+double pExtSigma0 = 0.1;
+
 int pNStencilPts = c_Winstel_stencil;
 
 std::string pLogsDirPath;

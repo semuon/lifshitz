@@ -16,6 +16,10 @@ extern double pInvM2;
 extern double pm2;
 extern double pZ;
 
+extern double pExtH0;
+extern double pExtK0;
+extern double pExtSigma0;
+
 extern int pNStencilPts;
 
 extern std::string pLogsDirPath;

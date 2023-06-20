@@ -178,9 +178,9 @@ int main(int argc, char **argv)
   int n = pN;
   int n_stencil_pts = pNStencilPts;
 
-  const double ext_h_h0 = 0.2;
-  const double ext_h_k0 = 0.2 * M_PI;
-  const double ext_h_sigma0 = 0.1;
+  double ext_h_h0 = pExtH0;
+  double ext_h_k0 = pExtK0;
+  double ext_h_sigma0 = pExtSigma0;
 
   tScalarModelParams params;
   params.lambdaN = pLambdaN;
