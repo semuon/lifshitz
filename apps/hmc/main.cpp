@@ -191,6 +191,7 @@ int main(int argc, char **argv)
   params.kappa = pKappa;
   params.h_ptr = MAKE_SHARED<RealScalarFieldN>(lat, n);
   ScalarModel::CreateLatticeOperators(params, ndim, n_stencil_pts);
+  ScalarModel::CreateHoppings(params, lat);
   ScalarModel::ExternalField(*params.h_ptr, ext_h_h0, ext_h_k0, ext_h_sigma0);
 
   pStdLogs.Write("Laplacian:\n");

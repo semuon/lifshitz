@@ -21,6 +21,50 @@ void ScalarModel::CreateLatticeOperators(tScalarModelParams &params, const uint 
   params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
 }
 
+void ScalarModel::CreateHoppings(tScalarModelParams &params, const Lattice &lat)
+{
+  uint vol = lat.Volume();
+  uint ndim = lat.Dim();
+
+  // Finite differences stencils
+  const VECTOR<StencilPoint<int, int64_t>> &lap = params.laplace_ptr->GetStencil();
+  const VECTOR<StencilPoint<int, int64_t>> &lap_sqr = params.laplace_sqr_ptr->GetStencil();
+  AuxVector<int> offset_bwd(ndim);
+
+  uint lap_npts = lap.size();
+  uint lap_sqr_npts = lap_sqr.size();
+
+  params.lap_hoppings.resize(vol * lap_npts * 2);
+  params.lap_sqr_hoppings.resize(vol * lap_sqr_npts * 2);
+
+  for(uint x = 0; x < vol; x++)
+  {
+    // Laplacian
+    for(uint si = 0; si < lap_npts; si++)
+    {
+      for(uint mu = 0; mu < ndim; mu++) { offset_bwd[mu] = -lap[si].offset.GetComponent(mu); }
+
+      uint yfwd = SiteIndexByOffset(lat, x, lap[si].offset);
+      uint ybwd = SiteIndexByOffset(lat, x, offset_bwd);
+
+      params.lap_hoppings[x * lap_npts * 2 + si * 2 + 0] = yfwd;
+      params.lap_hoppings[x * lap_npts * 2 + si * 2 + 1] = ybwd;
+    }
+
+    // Laplacian squared
+    for(uint si = 0; si < lap_sqr_npts; si++)
+    {
+      for(uint mu = 0; mu < ndim; mu++) { offset_bwd[mu] = -lap_sqr[si].offset.GetComponent(mu); }
+
+      uint yfwd = SiteIndexByOffset(lat, x, lap_sqr[si].offset);
+      uint ybwd = SiteIndexByOffset(lat, x, offset_bwd);
+
+      params.lap_sqr_hoppings[x * lap_sqr_npts * 2 + si * 2 + 0] = yfwd;
+      params.lap_sqr_hoppings[x * lap_sqr_npts * 2 + si * 2 + 1] = ybwd;
+    }
+  }
+}
+
 void ScalarModel::ConvertCouplings(const tLatticeScalarModelParams &lattice_params, const int ndim, tScalarModelParams &phys_params)
 {
   // NOT IMPLEMENTED
@@ -206,6 +250,9 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   const VECTOR<StencilPoint<int, int64_t>> &lap = params.laplace_ptr->GetStencil();
   const VECTOR<StencilPoint<int, int64_t>> &lap_sqr = params.laplace_sqr_ptr->GetStencil();
 
+  uint lap_npts = lap.size();
+  uint lap_sqr_npts = lap_sqr.size();
+
   double res = 0;
 
   for(uint i = 0; i < n; i++)
@@ -213,18 +260,22 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
     for(uint x = 0; x < vol; x++)
     {
       // Laplacian
-      for(uint si = 0; si < lap.size(); si++)
+      for(uint si = 0; si < lap_npts; si++)
       {
-        uint y = SiteIndexByOffset(lat, x, lap[si].offset);
+        uint hop_idx = x * lap_npts * 2 + si * 2 + 0;
+
+        uint y = params.lap_hoppings[hop_idx];
         boost::rational<int64_t> coef = lap[si].coef;
 
         res += -0.5 * Z * boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
       }
 
       // Laplacian squared
-      for(uint si = 0; si < lap_sqr.size(); si++)
+      for(uint si = 0; si < lap_sqr_npts; si++)
       {
-        uint y = SiteIndexByOffset(lat, x, lap_sqr[si].offset);
+        uint hop_idx = x * lap_sqr_npts * 2 + si * 2 + 0;
+
+        uint y = params.lap_sqr_hoppings[hop_idx];
         boost::rational<int64_t> coef = lap_sqr[si].coef;
 
         res += 0.5 * invM2 * boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
@@ -284,7 +335,9 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
   // Finite differences stencils
   const VECTOR<StencilPoint<int, int64_t>> &lap = params.laplace_ptr->GetStencil();
   const VECTOR<StencilPoint<int, int64_t>> &lap_sqr = params.laplace_sqr_ptr->GetStencil();
-  AuxVector<int> offset_bwd(ndim);
+
+  uint lap_npts = lap.size();
+  uint lap_sqr_npts = lap_sqr.size();
 
   for(uint i = 0; i < n; i++)
   {
@@ -294,25 +347,29 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
       force(x, i) = m2 * phi(x, i);
 
       // Laplacian
-      for(uint si = 0; si < lap.size(); si++)
+      for(uint si = 0; si < lap_npts; si++)
       {
-        for(uint mu = 0; mu < ndim; mu++) { offset_bwd[mu] = -lap[si].offset.GetComponent(mu); }
+        uint hop_idx = x * lap_npts * 2 + si * 2;
 
-        uint yfwd = SiteIndexByOffset(lat, x, lap[si].offset);
-        uint ybwd = SiteIndexByOffset(lat, x, offset_bwd);
+        uint yfwd = params.lap_hoppings[hop_idx + 0];
+        uint ybwd = params.lap_hoppings[hop_idx + 1];
 
-        force(x, i) += -0.5 * Z * boost::rational_cast<double>(lap[si].coef) * (phi(yfwd, i) + phi(ybwd, i));
+        boost::rational<int64_t> coef = lap[si].coef;
+
+        force(x, i) += -0.5 * Z * boost::rational_cast<double>(coef) * (phi(yfwd, i) + phi(ybwd, i));
       }
 
       // Laplacian squared
-      for(uint si = 0; si < lap_sqr.size(); si++)
+      for(uint si = 0; si < lap_sqr_npts; si++)
       {
-        for(uint mu = 0; mu < ndim; mu++) { offset_bwd[mu] = -lap_sqr[si].offset.GetComponent(mu); }
+        uint hop_idx = x * lap_sqr_npts * 2 + si * 2;
 
-        uint yfwd = SiteIndexByOffset(lat, x, lap_sqr[si].offset);
-        uint ybwd = SiteIndexByOffset(lat, x, offset_bwd);
+        uint yfwd = params.lap_sqr_hoppings[hop_idx + 0];
+        uint ybwd = params.lap_sqr_hoppings[hop_idx + 1];
 
-        force(x, i) += 0.5 * invM2 * boost::rational_cast<double>(lap_sqr[si].coef) * (phi(yfwd, i) + phi(ybwd, i));
+        boost::rational<int64_t> coef = lap_sqr[si].coef;
+
+        force(x, i) += 0.5 * invM2 * boost::rational_cast<double>(coef) * (phi(yfwd, i) + phi(ybwd, i));
       }
     }
   }

@@ -768,6 +768,8 @@ int main(int argc, char **argv)
   params.kappa = 0;
   
   ScalarModel::CreateLatticeOperators(params, ndim, n_stencil_pts);
+  ScalarModel::CreateHoppings(params, lat);
+  ScalarModel::ExternalField(*params.h_ptr, 0, 0, 1);
 
   int n_iters = pNiters;
   int n_tries = pNtries;

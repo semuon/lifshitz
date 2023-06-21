@@ -16,6 +16,8 @@ typedef struct ScalarModelParams_struct
   SHARED_PTR<RealScalarFieldN> h_ptr;
   SHARED_PTR<FiniteDifference<int64_t>> laplace_ptr;
   SHARED_PTR<FiniteDifference<int64_t>> laplace_sqr_ptr;
+  VECTOR<uint> lap_hoppings;
+  VECTOR<uint> lap_sqr_hoppings;
 } tScalarModelParams;
 
 typedef struct LatticeScalarModelParams_struct
@@ -37,6 +39,7 @@ public:
   static void ConvertCouplings(const tLatticeScalarModelParams &lattice_params, const int ndim, tScalarModelParams &phys_params);
 
   static void CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points);
+  static void CreateHoppings(tScalarModelParams &params, const Lattice &lat);
 
   static void ExternalField(RealScalarFieldN &h, const double h0, const double k0, const double sigma0);
 
