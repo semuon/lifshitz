@@ -160,6 +160,7 @@ int main(int argc, char **argv)
   const std::string fname_confs = pFnameConfs;
 
   const std::string fname_corr = "correlator_matrix.bin";
+  const std::string fname_full_corr = "correlator_full.bin";
 
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_read_attr);
 
@@ -169,11 +170,18 @@ int main(int argc, char **argv)
 
   if (pIsComputeCorr)
   {
-    for(uint mu = 0; mu < ndim; mu++)
+    if (pIsFullCorr)
     {
-      std::string fname_corr_mu = TO_STRING(mu) + "." + fname_corr;
+      f_corrs[0] = pDataDir.OpenFile(fname_full_corr, f_bin_write_attr);
+    }
+    else
+    {
+      for(uint mu = 0; mu < ndim; mu++)
+      {
+        std::string fname_corr_mu = TO_STRING(mu) + "." + fname_corr;
 
-      f_corrs[mu] = pDataDir.OpenFile(fname_corr_mu, f_bin_write_attr);
+        f_corrs[mu] = pDataDir.OpenFile(fname_corr_mu, f_bin_write_attr);
+      }
     }
   }
 
@@ -207,11 +215,18 @@ int main(int argc, char **argv)
 
       if (pIsComputeCorr)
       {
-        for(uint mu = 0; mu < ndim; mu++)
+        if (pIsFullCorr)
         {
-          ScalarModel::CorrelationMatrix(phi_field, corr_vol_avg, mu, corr);
-
-          Formats::DumpBinary(f_corrs[mu], corr);
+          ScalarModel::FullTwoPointFunction(phi_field, corr);
+          Formats::DumpBinary(f_corrs[0], corr);
+        }
+        else
+        {
+          for(uint mu = 0; mu < ndim; mu++)
+          {
+            ScalarModel::CorrelationMatrix(phi_field, corr_vol_avg, mu, corr);
+            Formats::DumpBinary(f_corrs[mu], corr);
+          }
         }
       }
     }
@@ -223,8 +238,15 @@ int main(int argc, char **argv)
 
   if (pIsComputeCorr)
   {
-    for(uint mu = 0; mu < ndim; mu++)
-      fclose(f_corrs[mu]);
+    if (pIsFullCorr)
+    {
+      fclose(f_corrs[0]);
+    }
+    else
+    {
+      for(uint mu = 0; mu < ndim; mu++)
+        fclose(f_corrs[mu]);
+    }
   }
 
   int64_t end = Utils::GetTimeMs64();

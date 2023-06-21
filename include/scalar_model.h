@@ -45,6 +45,7 @@ public:
 
   static void CorrelationFunctionOLD(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr);
   static void CorrelationMatrix(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr);
+  static void FullTwoPointFunction(const RealScalarFieldN &phi, VECTOR<double> &corr);
 };
 
 #endif

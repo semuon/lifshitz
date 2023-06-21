@@ -23,6 +23,8 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
 
   TCLAP::SwitchArg switchIsComputeCorr("", "compute-corr", "Compute correlation function", cmd, false);
   TCLAP::SwitchArg switchIsVolAvgCorr("", "vol-avg-corr", "Average correlation function over volume", cmd, false);
+  TCLAP::SwitchArg switchIsFullCorr("", "full-corr", "Compute full two-pont function C(x,y)", cmd, false);
+
 
   cmd.parse(argc, argv);
 
@@ -40,6 +42,7 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   pIsLatticeParamsSet = argLatCouplingsVisitor.IsFlagSet();
 
   pIsComputeCorr = switchIsComputeCorr.getValue();
+  pIsFullCorr = switchIsFullCorr.getValue();
   pIsVolAvgCorr = switchIsVolAvgCorr.getValue();
 
   option_parser_CheckParameters();
@@ -62,13 +65,14 @@ void option_parser_PrintParameters()
   std::cout << pFnameConfs << std::endl;
 
   pStdLogs.Write("  Skip first #confs:                          % -d\n", pNumSkipFirst);
-  pStdLogs.Write("  Skip last #confs:                           % -d\n", pNumSkipLast);
+  pStdLogs.Write("  Skip last #confs:                           % -d\n", pNumSkipLast); 
   pStdLogs.Write("  Process each #conf:                         % -d\n", pConfStep);
 
   pStdLogs.Write("\n  Compute correlation function:                %s\n", (pIsComputeCorr) ? "YES" : "NO");
   if (pIsComputeCorr)
   {
     pStdLogs.Write("    Average over volume:                       %s\n", (pIsVolAvgCorr) ? "YES" : "NO");
+    pStdLogs.Write("    Full C(x,y):                               %s\n", (pIsFullCorr) ? "YES" : "NO");
   }
 
   pStdLogs.Write("\n");

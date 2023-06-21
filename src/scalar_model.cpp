@@ -127,11 +127,36 @@ void ScalarModel::CorrelationMatrix(const RealScalarFieldN &phi, const bool vol_
       for(uint i = 0; i < n; i++)
       for(uint j = i; j < n; j++) // I'm lazy
       {
-        corr[s * n * n + i * n + j] += phi(x, i) * phi(x1, j) / (n * xmax);
+        corr[s * n * n + i * n + j] += phi(x, i) * phi(x1, j) / (xmax);
       }
 
       x1 = lat.SiteIndexForward(x1, mu);
     }
+  }
+}
+
+void ScalarModel::FullTwoPointFunction(const RealScalarFieldN &phi, VECTOR<double> &corr)
+{
+  const Lattice &lat = phi.GetLattice();
+
+  uint vol = lat.Volume();
+  uint n = phi.N();
+
+  corr.resize(vol * (vol + 1) * n * (n + 1) / 4);
+
+  for(uint i = 0; i < corr.size(); i++)
+    corr[i] = 0;
+
+  uint idx = 0;
+  for(uint x = 0; x < vol; x++)
+  for(uint y = x; y < vol; y++)
+  {
+      for(uint i = 0; i < n; i++)
+      for(uint j = i; j < n; j++)
+      {
+        corr[idx] += phi(x, i) * phi(y, j);
+        idx++;
+      }
   }
 }
 

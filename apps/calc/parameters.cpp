@@ -8,6 +8,7 @@ double pLatKappa = 0.0;
 bool pIsLatticeParamsSet = false;
 
 bool pIsComputeCorr = false;
+bool pIsFullCorr = false;
 bool pIsVolAvgCorr = false;
 
 std::string pFnameConfs = "confs.bin";
