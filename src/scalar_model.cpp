@@ -3,19 +3,8 @@
 
 void ScalarModel::CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points)
 {
-  SHARED_PTR<FiniteDifference<int64_t>> diff1d;
-
-  if (n_stencil_points == c_Winstel_stencil)
-  {
-    diff1d = FiniteDifference<int64_t>::MakeDiffMarc();
-  }
-  else
-  {
-    const uint op_dim = 1;
-    auto fwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, n_stencil_points);
-    auto bwd1d = FiniteDifference<int64_t>::MakeOneSidedDiff(op_dim, -n_stencil_points);
-    diff1d = FiniteDifference<int64_t>::ComposeOperators(*fwd1d, *bwd1d);
-  }
+  const uint op_dim = 2;
+  auto diff1d = FiniteDifference<int64_t>::MakeSymmetricDiff(op_dim, (uint)n_stencil_points);;
 
   params.laplace_ptr = FiniteDifference<int64_t>::MakeLaplacian(ndim, *diff1d);
   params.laplace_sqr_ptr = FiniteDifference<int64_t>::ComposeOperators(*params.laplace_ptr, *params.laplace_ptr);
@@ -329,7 +318,6 @@ void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFie
   const Lattice &lat = phi.GetLattice();
   const RealScalarFieldN &ext_h = *params.h_ptr;
 
-  uint ndim = lat.Dim();
   uint vol = lat.Volume();
 
   // Finite differences stencils

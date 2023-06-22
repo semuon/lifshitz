@@ -222,26 +222,46 @@ public:
     return res_ptr;
   }
 
-  static SHARED_PTR<FiniteDifference<T>> MakeDiffMarc()
+  static SHARED_PTR<FiniteDifference<T>> MakeSymmetricDiff(uint order, uint n_points)
   {
+    ASSERT(n_points > 0);
+    ASSERT(order < n_points);
+
     const uint dim = 1;
-    const uint npts = 5;
     SHARED_PTR<FiniteDifference<T>> res_ptr = MAKE_SHARED<FiniteDifference<T>>(dim);
 
-    AuxVector<int> aux(dim);
+    VECTOR<int> ks(n_points + 1);
+    int k0 = (n_points % 2 == 0) ? n_points / 2 : (n_points - 1) / 2;
+    for(uint i = 0; i < n_points + 1; i++) { ks[i] = -k0 + i; }
+    if (n_points % 2 == 0) { ks.erase(ks.begin() + k0); }
+    else { ks.pop_back(); }
 
-    res_ptr->stencil.reserve(npts);
+    VECTOR<VECTOR<rational<T>>> system(n_points);
+    for(uint i = 0; i < n_points; i++)
+    {
+      system[i].resize(n_points + 1);
 
-    aux[0] = -2;
-    res_ptr->stencil.emplace_back(aux, rational<T>(-1,12));
-    aux[0] = -1;
-    res_ptr->stencil.emplace_back(aux, rational<T>(16,12));
-    aux[0] = 0;
-    res_ptr->stencil.emplace_back(aux, rational<T>(-30,12));
-    aux[0] = 1;
-    res_ptr->stencil.emplace_back(aux, rational<T>(16,12));
-    aux[0] = 2;
-    res_ptr->stencil.emplace_back(aux, rational<T>(-1,12));
+      for(uint j = 0; j < n_points; j++)
+      {
+        rational<T> a_ij(ipow((T)ks[j], i), factorial(i));
+        system[i][j] = a_ij;
+      }
+
+      system[i][n_points] = (i == order) ? 1 : 0;
+    }
+
+    SolveWithGaussianElimination(n_points, system);
+
+    res_ptr->stencil.reserve(n_points);
+    for(uint i = 0; i < n_points; i++)
+    {
+      AuxVector<int> offset(dim);
+      offset[0] = ks[i];
+
+      StencilPoint<int, T> stencil_pt(offset, system[i][n_points]);
+
+      res_ptr->stencil.push_back(stencil_pt);
+    }
 
     return res_ptr;
   }

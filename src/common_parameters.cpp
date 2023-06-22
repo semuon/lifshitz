@@ -16,7 +16,7 @@ double pExtH0 = 0;
 double pExtK0 = 0.2 * M_PI;
 double pExtSigma0 = 0.1;
 
-int pNStencilPts = c_Winstel_stencil;
+int pNStencilPts = 5;
 
 std::string pLogsDirPath;
 std::string pDataDirPath;
