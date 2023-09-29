@@ -1,6 +1,25 @@
 #include "scalar_model.h"
 #include "profiler.h"
 
+// Gives a linear index dimension which is N*(N+1)/2
+uint dim_upper_triangular_index(const uint N)
+{
+  return N * (N + 1) / 2;
+}
+
+// Converts a pair 0 <= i <= j < N into a linear index 0 <= k < N*(N+1)/2
+uint pack_upper_triangular_index(const uint N, const uint i, const uint j)
+{
+  return N * (N - 1) / 2 - (N - i) * (N - i -1) / 2 + j;
+}
+
+// Converts a linear index 0 <= k < N*(N+1)/2 into pair 0 <= i <= j < N 
+void unpack_upper_triangular_index(const uint N, const uint k, uint &i, uint &j)
+{
+  i = N - 1 - (int)std::floor(std::sqrt(-8 * k + 4 * N * (N + 1) - 7)/2.0 - 0.5);
+  j = k - N * (N - 1) / 2 + (N - i) * ((N - i) - 1) / 2;
+}
+
 void ScalarModel::CreateLatticeOperators(tScalarModelParams &params, const uint ndim, const int n_stencil_points)
 {
   const uint op_dim = 2;
