@@ -187,28 +187,85 @@ void ScalarModel::CorrelationMatrix(const RealScalarFieldN &phi, const bool vol_
   }
 }
 
-void ScalarModel::FullTwoPointFunction(const RealScalarFieldN &phi, VECTOR<double> &corr)
+void ScalarModel::FullTwoPointFunction(const RealScalarFieldN &phi, const VECTOR<uint> is_translation_inv_mu, VECTOR<double> &corr)
 {
   const Lattice &lat = phi.GetLattice();
 
   uint vol = lat.Volume();
+  uint ndim = lat.Dim();
   uint n = phi.N();
 
-  corr.resize(vol * (vol + 1) * n * (n + 1) / 4);
+  uint corr_norm = vol;
 
+  VECTOR<uint> corr_dims;
+  for(uint mu = 0; mu < ndim; mu++)
+  {
+    // The direction mu is NOT translationally invariant
+    if (is_translation_inv_mu[mu] == 0)
+    {
+      corr_dims.push_back(lat.LatticeSize(mu));
+      corr_dims.push_back(lat.LatticeSize(mu));
+
+      corr_norm = corr_norm / lat.LatticeSize(mu);
+    }
+    // The direction mu is translationally invariant
+    else
+    {
+      corr_dims.push_back(lat.LatticeSize(mu));
+    }
+  }
+
+  uint index_dim = corr_dims.size();
+
+  // We use class Lattice to help enumerating correlator indices
+  Lattice corr_indices(corr_dims, index_dim, 1, 1);
+
+  VECTOR<int> xvec(ndim);
+  VECTOR<int> yvec(ndim);
+  VECTOR<int> index_vec(index_dim);
+
+  // pStdLogs.Write("VOL: %u\n", vol);
+  // pStdLogs.Write("NORM: %u\n", corr_norm);
+  // pStdLogs.Write("INDEX DIM: %u\n", index_dim);
+  // for(uint i = 0; i < index_dim; i++)
+  //   pStdLogs.Write("\t%u = %u\n", i, corr_dims[i]);
+
+  corr.resize(corr_indices.Volume() * n * n);
   for(uint i = 0; i < corr.size(); i++)
     corr[i] = 0;
 
-  uint idx = 0;
   for(uint x = 0; x < vol; x++)
-  for(uint y = x; y < vol; y++)
+  for(uint y = 0; y < vol; y++)
   {
-      for(uint i = 0; i < n; i++)
-      for(uint j = i; j < n; j++)
+    lat.SiteCoordinates(xvec, x);
+    lat.SiteCoordinates(yvec, y);
+
+    uint pos = 0;
+    for(uint mu = 0; mu < ndim; mu++)
+    {
+      // The direction mu is NOT translationally invariant
+      if (is_translation_inv_mu[mu] == 0)
       {
-        corr[idx] += phi(x, i) * phi(y, j);
-        idx++;
+        index_vec[pos] = xvec[mu];
+        index_vec[pos + 1] = yvec[mu];
+        pos += 2;
       }
+      // The direction mu is translationally invariant
+      else
+      {
+        index_vec[pos] = xvec[mu] - yvec[mu];
+        pos += 1;
+      }
+    }
+
+    for(uint i = 0; i < n; i++)
+    for(uint j = 0; j < n; j++)
+    {
+      uint index = corr_indices.SiteIndex(index_vec);
+      index = index * n * n + i * n + j;
+
+      corr[index] += phi(x, i) * phi(y, j) / (double) corr_norm;
+    }
   }
 }
 

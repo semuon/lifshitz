@@ -120,6 +120,13 @@ int main(int argc, char **argv)
   double ext_h_h0 = pExtH0;
   double ext_h_k0 = pExtK0;
   double ext_h_sigma0 = pExtSigma0;
+  const uint ext_h_broken_mu = 0;
+
+  VECTOR<uint> is_translation_inv_mu(ndim);
+  for(uint mu = 0; mu < ndim; mu++)
+  {
+    is_translation_inv_mu[mu] = (ext_h_h0 != 0 && mu == ext_h_broken_mu) ? 0 : 1;
+  }
 
   tScalarModelParams params;
   params.lambdaN = pLambdaN;
@@ -218,7 +225,7 @@ int main(int argc, char **argv)
       {
         if (pIsFullCorr)
         {
-          ScalarModel::FullTwoPointFunction(phi_field, corr);
+          ScalarModel::FullTwoPointFunction(phi_field, is_translation_inv_mu, corr);
           Formats::DumpBinary(f_corrs[0], corr);
         }
         else
