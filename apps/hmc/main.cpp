@@ -259,17 +259,22 @@ int main(int argc, char **argv)
   const std::string fname_confs = "confs.bin";
   const std::string fname_auto_tune = "auto_tune.txt";
   const std::string fname_last_conf = "last.conf.bin";
+  const std::string fname_h_field = "h_field.bin";
 
   FILE *f_hmc_stat = pDataDir.OpenFile(fname_hmc_stat, f_txt_write_attr);
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_write_attr);
   FILE *f_simple_observables = pDataDir.OpenFile(fname_simple_observables, f_txt_write_attr);
   FILE *f_magnetization = pDataDir.OpenFile(fname_magnetization, f_bin_write_attr);
+  FILE *f_h_field = pDataDir.OpenFile(fname_h_field, f_bin_write_attr);
 
   FILE *f_auto_tune = NULL;
   if (pAutoTune)
   {
     f_auto_tune = pDataDir.OpenFile(fname_auto_tune, f_txt_write_attr);
   }
+
+  Formats::DumpBinary(f_h_field, *params.h_ptr);
+  fclose(f_h_field);
 
   RealScalarFieldN pi_field(lat, n);
   RealScalarFieldN phi_field_0(lat, n);
