@@ -44,6 +44,7 @@ public:
   static void ExternalField(RealScalarFieldN &h, const double h0, const double k0, const double sigma0);
 
   static double Action(const tScalarModelParams &params, const RealScalarFieldN &phi);
+  static double ActionWithOps(const tScalarModelParams &params, const RealScalarFieldN &phi, VECTOR<double> &ops);
   static void HMCforce(const tScalarModelParams &params, const RealScalarFieldN &phi, RealScalarFieldN &force);
 
   static void CorrelationFunctionOLD(const RealScalarFieldN &phi, const bool vol_avg, const uint mu, VECTOR<double> &corr);

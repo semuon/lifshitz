@@ -295,6 +295,21 @@ uint ScalarModel::SiteIndexByOffset(const Lattice &lat, uint x, const AuxVector<
 
 double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFieldN &phi)
 {
+  VECTOR<double> ops;
+
+  return ActionWithOps(params, phi, ops);
+}
+
+double ScalarModel::ActionWithOps(const tScalarModelParams &params, const RealScalarFieldN &phi, VECTOR<double> &ops)
+{
+  const size_t c_num_terms = 7;
+
+  if (ops.size() != c_num_terms)
+    ops.resize(c_num_terms);
+
+  for (size_t i = 0; i < c_num_terms; i++)
+    ops[i] = 0;
+
   pGlobalProfiler.StartTimer("Action");
 
   double m2 = params.m2;
@@ -318,23 +333,10 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   uint lap_npts = lap.size();
   uint lap_sqr_npts = lap_sqr.size();
 
-  double res = 0;
-
   for(uint i = 0; i < n; i++)
   {
     for(uint x = 0; x < vol; x++)
     {
-      // Laplacian
-      for(uint si = 0; si < lap_npts; si++)
-      {
-        uint hop_idx = x * lap_npts * 2 + si * 2 + 0;
-
-        uint y = params.lap_hoppings[hop_idx];
-        boost::rational<int64_t> coef = lap[si].coef;
-
-        res += -0.5 * Z * boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
-      }
-
       // Laplacian squared
       for(uint si = 0; si < lap_sqr_npts; si++)
       {
@@ -343,11 +345,22 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
         uint y = params.lap_sqr_hoppings[hop_idx];
         boost::rational<int64_t> coef = lap_sqr[si].coef;
 
-        res += 0.5 * invM2 * boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
+        ops[0] += boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
+      }
+
+      // Laplacian
+      for(uint si = 0; si < lap_npts; si++)
+      {
+        uint hop_idx = x * lap_npts * 2 + si * 2 + 0;
+
+        uint y = params.lap_hoppings[hop_idx];
+        boost::rational<int64_t> coef = lap[si].coef;
+
+        ops[1] += boost::rational_cast<double>(coef) * phi(x, i) * phi(y, i);
       }
 
       // Mass
-      res += 0.5 * m2 * phi(x, i) * phi(x, i);
+      ops[2] += phi(x, i) * phi(x, i);
     }
   }
 
@@ -359,8 +372,8 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
     for(uint i = 0; i < n; i++)
       phi2 += phi(x, i) * phi(x, i);
 
-    res += lambdaN * phi2 * phi2 / (4.0 * n);
-    res += kappa * phi2 * phi2 * phi2 / 6.0;
+    ops[3] += phi2 * phi2;
+    ops[4] += phi2 * phi2 * phi2;
   }
 
   // External field
@@ -368,13 +381,14 @@ double ScalarModel::Action(const tScalarModelParams &params, const RealScalarFie
   {
     for(uint x = 0; x < vol; x++)
     {
-      res += -ext_h(x, i) * phi(x, i);
+      ops[5] += phi(x, i);
+      ops[6] += ext_h(x, i) * phi(x, i);
     }
   }
 
   pGlobalProfiler.StopTimer("Action");
 
-  return res;
+  return 0.5 * invM2 * ops[0] -0.5 * Z * ops[1] + 0.5 * m2 * ops[2] + lambdaN * ops[3] / (4.0 * n) + kappa * ops[4] / 6.0 - ops[6];
 }
 
 void ScalarModel::HMCforce(const tScalarModelParams &params, const RealScalarFieldN &phi, RealScalarFieldN &force)

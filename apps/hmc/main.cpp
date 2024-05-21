@@ -242,6 +242,8 @@ int main(int argc, char **argv)
   VECTOR<double> hmc_dt_history;
   VECTOR<int> acceptance_history;
 
+  VECTOR<double> action_ops;
+
   action_history.reserve(hmc_num_conf);
   dh_history.reserve(hmc_num_conf);
   exp_dh_history.reserve(hmc_num_conf);
@@ -405,7 +407,7 @@ int main(int argc, char **argv)
     for(uint i = 0; i < n * vol; i++)
       h1 += pi_field[i] * pi_field[i] / 2.0;
 
-    conf_action = ScalarModel::Action(params, phi_field_1);
+    conf_action = ScalarModel::ActionWithOps(params, phi_field_1, action_ops);
     h1 += conf_action;
 
     // Accept/reject step
@@ -512,7 +514,12 @@ int main(int argc, char **argv)
 
         Formats::DumpBinary(f_confs, phi_field_0);
 
-        SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\n", conf_action / vol, m_abs, m_pwr_2);
+        SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\t", conf_action / vol, m_abs, m_pwr_2);
+        for(uint i = 0; i + 1 < action_ops.size(); i++)
+        {
+          SAFE_FPRINTF(f_simple_observables, "%2.15le\t", action_ops[i]);
+        }
+        SAFE_FPRINTF(f_simple_observables, "%2.15le\n", action_ops.back());
         fflush(f_simple_observables);
 
         Formats::DumpBinary(f_magnetization, magnetization_i);
