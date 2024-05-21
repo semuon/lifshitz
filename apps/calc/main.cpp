@@ -163,13 +163,17 @@ int main(int argc, char **argv)
   int num_skip_last = pNumSkipLast;
   int conf_step = pConfStep;
 
+  VECTOR<double> action_ops;
+
   bool corr_vol_avg = pIsVolAvgCorr;
 
   const std::string fname_confs = pFnameConfs;
 
   const std::string fname_corr = "correlator_matrix.bin";
   const std::string fname_full_corr = "correlator_full.bin";
+  const std::string fname_simple_observables = "simple_observables.txt";
 
+  FILE *f_simple_observables = pDataDir.OpenFile(fname_simple_observables, f_txt_write_attr);
   FILE *f_confs = pDataDir.OpenFile(fname_confs, f_bin_read_attr);
 
   VECTOR<FILE *> f_corrs(ndim);
@@ -218,8 +222,33 @@ int main(int argc, char **argv)
     {
       main_LoadConfAt(f_confs, conf_file_size, conf_idx, phi_field);
 
+      // Simple observables
+      double conf_action = ScalarModel::ActionWithOps(params, phi_field, action_ops);
+
       pStdLogs.Write("\nConf. id = %d\n", conf_idx + 1);
-      pStdLogs.Write("ACTION = %2.15le\n", ScalarModel::Action(params, phi_field)/(double)vol);
+      pStdLogs.Write("ACTION = %2.15le\n", conf_action/(double)vol);
+
+      double m_pwr_2 = 0;
+      double m_abs = 0;
+
+      for(int i = 0; i < n; i++)
+      {
+        double cond = 0;
+
+        for(uint x = 0; x < vol; x++)
+          cond += phi_field(x, i);
+
+        m_pwr_2 += cond * cond;
+        m_abs += fabs(cond);
+      }
+
+      SAFE_FPRINTF(f_simple_observables, "%2.15le\t%2.15le\t%2.15le\t", conf_action / vol, m_abs, m_pwr_2);
+      for(uint i = 0; i + 1 < action_ops.size(); i++)
+      {
+        SAFE_FPRINTF(f_simple_observables, "%2.15le\t", action_ops[i]);
+      }
+      SAFE_FPRINTF(f_simple_observables, "%2.15le\n", action_ops.back());
+      fflush(f_simple_observables);
 
       if (pIsComputeCorr)
       {
@@ -243,6 +272,8 @@ int main(int argc, char **argv)
 
     pStdLogs.Write("\nCALC COMPLETED\n\n");
   }
+
+  fclose(f_simple_observables);
 
   if (pIsComputeCorr)
   {
