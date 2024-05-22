@@ -187,84 +187,90 @@ void ScalarModel::CorrelationMatrix(const RealScalarFieldN &phi, const bool vol_
   }
 }
 
-void ScalarModel::FullTwoPointFunction(const RealScalarFieldN &phi, const VECTOR<uint> is_translation_inv_mu, VECTOR<double> &corr)
+void ScalarModel::FullTwoPointFunction(const RealScalarFieldN &phi, const VECTOR<uint> is_translation_inv_mu, const bool is_vol_avg, VECTOR<double> &corr)
 {
   const Lattice &lat = phi.GetLattice();
 
-  uint vol = lat.Volume();
   uint ndim = lat.Dim();
   uint n = phi.N();
 
-  uint corr_norm = vol;
-
   VECTOR<uint> corr_dims;
+  VECTOR<uint> avg_dims;
+
+  // O(N) matrix indices
+  corr_dims.push_back(n);
+  corr_dims.push_back(n);
+
   for(uint mu = 0; mu < ndim; mu++)
   {
+    uint l_mu = lat.LatticeSize(mu);
+
+    // Average over translationally invariant dimensions
+    if (is_vol_avg)
+      avg_dims.push_back((is_translation_inv_mu[mu] == 0) ? 1 : l_mu);
+    else
+      avg_dims.push_back(1);
+
     // The direction mu is NOT translationally invariant
     if (is_translation_inv_mu[mu] == 0)
     {
-      corr_dims.push_back(lat.LatticeSize(mu));
-      corr_dims.push_back(lat.LatticeSize(mu));
-
-      corr_norm = corr_norm / lat.LatticeSize(mu);
+      corr_dims.push_back(l_mu);
+      corr_dims.push_back(l_mu);
     }
     // The direction mu is translationally invariant
     else
     {
-      corr_dims.push_back(lat.LatticeSize(mu));
+      corr_dims.push_back(l_mu);
     }
   }
 
-  uint index_dim = corr_dims.size();
-
   // We use class Lattice to help enumerating correlator indices
-  Lattice corr_indices(corr_dims, index_dim, 1, 1);
+  Lattice corr_indices(corr_dims, corr_dims.size(), 1, 1);
+  Lattice avg_indices(avg_dims, avg_dims.size(), 1, 1);
 
   VECTOR<int> xvec(ndim);
   VECTOR<int> yvec(ndim);
-  VECTOR<int> index_vec(index_dim);
+  VECTOR<int> avg_x0(ndim);
+  VECTOR<int> index_vec(corr_dims.size());
 
-  // pStdLogs.Write("VOL: %u\n", vol);
-  // pStdLogs.Write("NORM: %u\n", corr_norm);
-  // pStdLogs.Write("INDEX DIM: %u\n", index_dim);
-  // for(uint i = 0; i < index_dim; i++)
-  //   pStdLogs.Write("\t%u = %u\n", i, corr_dims[i]);
-
-  corr.resize(corr_indices.Volume() * n * n);
+  corr.resize(corr_indices.Volume());
   for(uint i = 0; i < corr.size(); i++)
     corr[i] = 0;
 
-  for(uint x = 0; x < vol; x++)
-  for(uint y = 0; y < vol; y++)
+  for(uint avg_index = 0; avg_index < avg_indices.Volume(); avg_index++)
   {
-    lat.SiteCoordinates(xvec, x);
-    lat.SiteCoordinates(yvec, y);
+    avg_indices.SiteCoordinates(avg_x0, avg_index);
 
-    uint pos = 0;
-    for(uint mu = 0; mu < ndim; mu++)
+    for(uint index = 0; index < corr.size(); index++)
     {
-      // The direction mu is NOT translationally invariant
-      if (is_translation_inv_mu[mu] == 0)
-      {
-        index_vec[pos] = xvec[mu];
-        index_vec[pos + 1] = yvec[mu];
-        pos += 2;
-      }
-      // The direction mu is translationally invariant
-      else
-      {
-        index_vec[pos] = xvec[mu] - yvec[mu];
-        pos += 1;
-      }
-    }
+      corr_indices.SiteCoordinates(index_vec, index);
 
-    for(uint i = 0; i < n; i++)
-    for(uint j = 0; j < n; j++)
-    {
-      uint index = corr_indices.SiteIndex(index_vec);
-      index = index * n * n + i * n + j;
+      uint mat_i = index_vec[0];
+      uint mat_j = index_vec[1];
 
-      corr[index] += phi(x, i) * phi(y, j) / (double) corr_norm;
+      uint pos = 2;
+      for(uint mu = 0; mu < ndim; mu++)
+      {
+        // The direction mu is NOT translationally invariant
+        if (is_translation_inv_mu[mu] == 0)
+        {
+          xvec[mu] = index_vec[pos];
+          yvec[mu] = index_vec[pos + 1];
+          pos += 2;
+        }
+        // The direction mu is translationally invariant
+        else
+        {
+          xvec[mu] = avg_x0[mu];
+          yvec[mu] = avg_x0[mu] + index_vec[pos];
+          pos += 1;
+        }
+      }
+
+      uint x = lat.SiteIndex(xvec);
+      uint y = lat.SiteIndex(yvec);
+
+      corr[index] += phi(x, mat_i) * phi(y, mat_j) / (double) avg_indices.Volume();
     }
   }
 }

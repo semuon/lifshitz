@@ -254,7 +254,7 @@ int main(int argc, char **argv)
       {
         if (pIsFullCorr)
         {
-          ScalarModel::FullTwoPointFunction(phi_field, is_translation_inv_mu, corr);
+          ScalarModel::FullTwoPointFunction(phi_field, is_translation_inv_mu, corr_vol_avg, corr);
           Formats::DumpBinary(f_corrs[0], corr);
         }
         else
