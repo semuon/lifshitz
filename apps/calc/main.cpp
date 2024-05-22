@@ -200,6 +200,7 @@ int main(int argc, char **argv)
   RealScalarFieldN phi_field(lat, n);
 
   VECTOR<double> corr(corr_ls);
+  VECTOR<double> block_corr;
 
   off_t conf_file_size = Utils::GetFileSize(f_confs);
   int num_file_confs = main_GetNumConfsFile(conf_file_size, phi_field.Count());
@@ -255,7 +256,25 @@ int main(int argc, char **argv)
         if (pIsFullCorr)
         {
           ScalarModel::FullTwoPointFunction(phi_field, is_translation_inv_mu, corr_vol_avg, corr);
-          Formats::DumpBinary(f_corrs[0], corr);
+
+          if (conf_idx == 0)
+          {
+            block_corr.resize(corr.size());
+
+            for(uint i = 0; i < block_corr.size(); i++)
+              block_corr[i] = 0;
+          }
+
+          for(uint i = 0; i <  corr.size(); i++)
+              block_corr[i] += corr[i] / (double)pBlockSize;
+
+          if ((conf_idx + 1) % pBlockSize == 0)
+          {
+            Formats::DumpBinary(f_corrs[0], block_corr);
+
+            for(uint i = 0; i < block_corr.size(); i++)
+              block_corr[i] = 0;
+          }
         }
         else
         {

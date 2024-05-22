@@ -16,3 +16,5 @@ std::string pFnameConfs = "confs.bin";
 int pNumSkipFirst = 0;
 int pNumSkipLast = 0;
 int pConfStep = 1;
+
+int pBlockSize = 1;

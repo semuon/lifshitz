@@ -25,6 +25,8 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   TCLAP::SwitchArg switchIsVolAvgCorr("", "vol-avg-corr", "Average correlation function over volume", cmd, false);
   TCLAP::SwitchArg switchIsFullCorr("", "full-corr", "Compute full two-pont function C(x,y)", cmd, false);
 
+  TCLAP::ValueArg<int> argBlockSize("", "block-size", "Size of block average.", false, pConfStep, "n", cmd);
+
 
   cmd.parse(argc, argv);
 
@@ -44,6 +46,8 @@ void option_parser_Parse(TCLAP::CmdLine &cmd, int argc, char **argv)
   pIsComputeCorr = switchIsComputeCorr.getValue();
   pIsFullCorr = switchIsFullCorr.getValue();
   pIsVolAvgCorr = switchIsVolAvgCorr.getValue();
+
+  pBlockSize = argBlockSize.getValue();
 
   option_parser_CheckParameters();
 }
@@ -73,6 +77,7 @@ void option_parser_PrintParameters()
   {
     pStdLogs.Write("    Average over volume:                       %s\n", (pIsVolAvgCorr) ? "YES" : "NO");
     pStdLogs.Write("    Full C(x,y):                               %s\n", (pIsFullCorr) ? "YES" : "NO");
+    pStdLogs.Write("    Block size:                               % -d\n", pBlockSize);
   }
 
   pStdLogs.Write("\n");

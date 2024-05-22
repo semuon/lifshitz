@@ -33,4 +33,6 @@ extern int pNumSkipFirst;
 extern int pNumSkipLast;
 extern int pConfStep;
 
+extern int pBlockSize;
+
 #endif
